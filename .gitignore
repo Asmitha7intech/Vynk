@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment / Secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+.next/
+.vite/
+
+# Testing / Coverage
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Prisma
+*.db
+*.db-journal
+
+# Antigravity / local AI tooling
+.gemini/
+
+# Docker local data
+docker-data/
+
+# Generated files
+*.generated.*
