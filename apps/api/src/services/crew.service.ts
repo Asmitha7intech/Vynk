@@ -1,32 +1,68 @@
 import { crewRepository } from '../repositories/crew.repository';
-import { gamificationRepository } from '../repositories/gamification.repository';
-import { CrewRole } from '@vynk/database';
+import { prisma } from '@vynk/database';
 
 export const crewService = {
-  listCrews: (category?: string) => crewRepository.listAll(category),
+  listCrews: (category?: string) => crewRepository.listCrews(category),
 
   getCrew: (id: string) => crewRepository.findById(id),
 
-  createCrew: async (userId: string, data: any) => {
-    const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36);
-    const crew = await crewRepository.create({
-      ...data,
-      slug,
-      captainId: userId,
-    });
+  createCrew: async (captainId: string, data: any) => {
+    const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const existing = await crewRepository.findBySlug(slug);
+    if (existing) {
+      throw new Error('Crew name is already taken. Please choose another unique squad name.');
+    }
 
-    // Reward Captain XP (+100 XP)
-    await gamificationRepository.addXPTransaction(userId, 100, `Formed crew ${crew.name}`, 'CREW_CREATION', crew.id);
+    const crew = await crewRepository.createCrew(captainId, data);
+
+    // Initial Team Agreement digital acceptance by Captain
+    if (crew.agreement) {
+      await prisma.teamAgreement.update({
+        where: { teamId: crew.id },
+        data: {
+          acceptedUserIds: [captainId],
+        },
+      });
+    }
 
     return crew;
   },
 
-  joinCrew: async (crewId: string, userId: string, roleName: string) => {
-    const member = await crewRepository.addMember(crewId, userId, CrewRole.CONTRIBUTOR, roleName);
-    // Reward Join XP (+50 XP)
-    await gamificationRepository.addXPTransaction(userId, 50, `Joined crew`, 'CREW_JOIN', crewId);
-    return member;
+  joinCrew: async (crewId: string, userId: string, roleName?: string) => {
+    const crew = await crewRepository.findById(crewId);
+    if (!crew) throw new Error('Crew not found');
+
+    if (crew.members.length >= crew.maxMembers) {
+      throw new Error('Crew roster is already at maximum capacity.');
+    }
+
+    const isMember = crew.members.some((m) => m.userId === userId);
+    if (isMember) {
+      throw new Error('You are already an active member of this crew squad.');
+    }
+
+    return crewRepository.addMember(crewId, userId, 'CONTRIBUTOR', roleName || 'Contributor');
   },
 
-  updateAgreement: (crewId: string, data: any) => crewRepository.updateAgreement(crewId, data),
+  updateAgreement: async (crewId: string, data: any) => {
+    return crewRepository.updateAgreement(crewId, data);
+  },
+
+  signTeamAgreement: async (crewId: string, userId: string) => {
+    const agreement = await prisma.teamAgreement.findUnique({
+      where: { teamId: crewId },
+    });
+
+    if (!agreement) throw new Error('Team agreement not found for this crew.');
+
+    const alreadyAccepted = agreement.acceptedUserIds.includes(userId);
+    if (alreadyAccepted) return agreement;
+
+    return prisma.teamAgreement.update({
+      where: { teamId: crewId },
+      data: {
+        acceptedUserIds: [...agreement.acceptedUserIds, userId],
+      },
+    });
+  },
 };

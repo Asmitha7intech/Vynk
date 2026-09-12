@@ -29,9 +29,11 @@ export function Navbar({ onOpenCreatePost }: NavbarProps) {
       {/* Brand & Search */}
       <div className="flex items-center gap-6 flex-1 max-w-xl">
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-sky-500 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-            V
-          </div>
+          <img
+            src="/vynk-logo.png"
+            alt="VYNK"
+            className="w-9 h-9 object-contain rounded-xl shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform"
+          />
           <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-foreground via-foreground to-indigo-400 bg-clip-text text-transparent">
             VYNK
           </span>

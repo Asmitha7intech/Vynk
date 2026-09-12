@@ -1,3 +1,4 @@
+import { userRepository } from '../repositories/user.repository';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { registerSchema, loginSchema, refreshTokenSchema } from '@vynk/validation';
 import { authService } from '../services/auth.service';
@@ -86,7 +87,7 @@ export async function authController(fastify: FastifyInstance) {
 
   fastify.get('/me', { preHandler: [(fastify as any).authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.userPayload!.userId;
-    const user = await authService.login(request.userPayload!.email, 'vynkPass123!').catch(() => null);
+    const user = await userRepository.findById(userId);
     return reply.send({
       success: true,
       data: { user },

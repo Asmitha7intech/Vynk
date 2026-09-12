@@ -1,40 +1,72 @@
 import { prisma } from '@vynk/database';
 
 export const postRepository = {
-  getFeed: (limit = 30) => prisma.post.findMany({
-    include: {
-      author: {
-        include: { skills: true },
+  listFeed: async (limit = 20, cursor?: string) => {
+    return prisma.post.findMany({
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: true,
+        voyage: true,
+        _count: {
+          select: { comments: true, reactions: true },
+        },
       },
-      voyage: true,
-      comments: {
-        include: { author: true },
-        take: 3,
-        orderBy: { createdAt: 'desc' },
+    });
+  },
+
+  findById: async (id: string) => {
+    return prisma.post.findUnique({
+      where: { id },
+      include: {
+        author: true,
+        voyage: true,
+        comments: {
+          include: { author: true },
+          orderBy: { createdAt: 'asc' },
+        },
+        reactions: true,
       },
-      reactions: true,
-    },
-    orderBy: { createdAt: 'desc' },
-    take: limit,
-  }),
+    });
+  },
 
-  create: (data: any) => prisma.post.create({
-    data,
-    include: {
-      author: true,
-      voyage: true,
-    },
-  }),
+  createPost: async (authorId: string, data: any) => {
+    return prisma.post.create({
+      data: {
+        authorId,
+        type: data.type || 'TEXT',
+        title: data.title || null,
+        content: data.content,
+        mediaUrls: data.mediaUrls || [],
+        tags: data.tags || [],
+        voyageId: data.voyageId || null,
+      },
+      include: {
+        author: true,
+        voyage: true,
+      },
+    });
+  },
 
-  addComment: (postId: string, authorId: string, content: string, parentId?: string) => prisma.comment.create({
-    data: {
-      postId,
-      authorId,
-      content,
-      parentId,
-    },
-    include: { author: true },
-  }),
+  addComment: async (postId: string, authorId: string, content: string, parentId?: string) => {
+    const comment = await prisma.comment.create({
+      data: {
+        postId,
+        authorId,
+        content,
+        parentId: parentId || null,
+      },
+      include: { author: true },
+    });
+
+    await prisma.post.update({
+      where: { id: postId },
+      data: { commentsCount: { increment: 1 } },
+    });
+
+    return comment;
+  },
 
   toggleReaction: async (postId: string, userId: string, emoji = '🔥') => {
     const existing = await prisma.reaction.findUnique({

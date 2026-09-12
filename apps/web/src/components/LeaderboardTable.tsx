@@ -1,112 +1,126 @@
-import React from 'react';
-import { Trophy, TrendingUp, TrendingDown, Minus, Crown, Sparkles, Flame } from 'lucide-react';
-import { Card, CardHeader, CardContent } from './Card';
+import React, { useState } from 'react';
+import { Trophy, Medal, ArrowUp, ArrowDown, Minus, Sparkles, HelpCircle } from 'lucide-react';
 import { Avatar } from './Avatar';
+import { Badge } from './Badge';
+import { Card } from './Card';
 import { LevelBadge } from './LevelBadge';
+import { StreakBadge } from './StreakBadge';
 import { LeaderboardEntry } from '@vynk/types';
+import { Link } from 'react-router-dom';
+import { ScoreBreakdownModal } from './ScoreBreakdownModal';
 
-export function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
+interface LeaderboardTableProps {
+  entries: LeaderboardEntry[];
+}
+
+export function LeaderboardTable({ entries }: LeaderboardTableProps) {
+  const [selectedUser, setSelectedUser] = useState<{ id: string; username: string } | null>(null);
+
+  if (entries.length === 0) {
+    return (
+      <div className="p-12 text-center text-xs text-muted-foreground bg-card rounded-2xl border border-border">
+        No leaderboard rankings recorded for this scope yet. Ship Voyages & solve daily Quests to rank #1!
+      </div>
+    );
+  }
+
   const top3 = entries.slice(0, 3);
-  const rest = entries.slice(3);
+  const remaining = entries.slice(3);
 
   return (
     <div className="space-y-6">
-      {/* Visual Podium for Top 3 */}
-      {top3.length >= 3 && (
-        <div className="grid grid-cols-3 gap-3 md:gap-4 items-end pt-8 pb-4">
-          {/* Rank 2 */}
-          <div className="flex flex-col items-center order-1">
-            <div className="relative mb-3">
-              <Avatar src={top3[1].user.avatarUrl} fallback={top3[1].user.displayName} size="lg" />
-              <div className="absolute -bottom-2 -right-1 w-6 h-6 rounded-full bg-slate-300 text-slate-950 font-black text-xs flex items-center justify-center border-2 border-card">
-                2
-              </div>
-            </div>
-            <span className="text-xs font-bold truncate max-w-[100px]">{top3[1].user.displayName}</span>
-            <span className="text-[11px] font-mono text-muted-foreground">{top3[1].score} XP</span>
-            <div className="w-full h-24 mt-2 rounded-t-2xl bg-gradient-to-t from-slate-800/40 to-slate-700/20 border-t border-slate-500/30 flex items-center justify-center font-bold text-slate-400">
-              #2
-            </div>
-          </div>
+      {/* Animated Top 3 Podium */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+        {top3.map((entry, idx) => {
+          const podiumOrder = idx === 0 ? 'sm:order-2 border-amber-500/50 bg-gradient-to-b from-amber-500/10 to-card' : idx === 1 ? 'sm:order-1 border-slate-400/40 bg-card' : 'sm:order-3 border-amber-700/40 bg-card';
+          const medalColor = idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-slate-300' : 'text-amber-600';
+          const medalLabel = idx === 0 ? '1st Place' : idx === 1 ? '2nd Place' : '3rd Place';
 
-          {/* Rank 1 (Champion) */}
-          <div className="flex flex-col items-center order-2">
-            <Crown className="w-6 h-6 text-amber-400 animate-bounce mb-1" />
-            <div className="relative mb-3">
-              <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 opacity-75 blur-sm animate-pulse" />
-              <Avatar src={top3[0].user.avatarUrl} fallback={top3[0].user.displayName} size="xl" className="relative" />
-              <div className="absolute -bottom-2 -right-1 w-7 h-7 rounded-full bg-amber-400 text-amber-950 font-black text-sm flex items-center justify-center border-2 border-card shadow-lg">
-                1
-              </div>
-            </div>
-            <span className="text-sm font-extrabold truncate max-w-[120px] text-amber-400">{top3[0].user.displayName}</span>
-            <span className="text-xs font-mono font-bold text-foreground">{top3[0].score} XP</span>
-            <div className="w-full h-32 mt-2 rounded-t-2xl bg-gradient-to-t from-amber-900/40 to-amber-600/20 border-t border-amber-400/40 flex items-center justify-center font-black text-amber-400 text-lg">
-              #1
-            </div>
-          </div>
+          return (
+            <Card key={entry.user.id} className={`p-4 text-center space-y-3 relative overflow-hidden flex flex-col justify-between ${podiumOrder}`}>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-black ${medalColor} flex items-center gap-1`}>
+                    <Trophy className="w-3.5 h-3.5" />
+                    <span>{medalLabel}</span>
+                  </span>
+                  <button
+                    onClick={() => setSelectedUser({ id: entry.user.id, username: entry.user.username })}
+                    title="Why this score?"
+                    className="text-muted-foreground hover:text-amber-400 text-xs transition-colors cursor-pointer"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                  </button>
+                </div>
 
-          {/* Rank 3 */}
-          <div className="flex flex-col items-center order-3">
-            <div className="relative mb-3">
-              <Avatar src={top3[2].user.avatarUrl} fallback={top3[2].user.displayName} size="lg" />
-              <div className="absolute -bottom-2 -right-1 w-6 h-6 rounded-full bg-amber-700 text-amber-100 font-black text-xs flex items-center justify-center border-2 border-card">
-                3
+                <div className="relative inline-block mx-auto pt-1">
+                  <Avatar src={entry.user.avatarUrl} fallback={entry.user.displayName} size="lg" className="ring-2 ring-amber-500/30" />
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-bold text-foreground truncate">{entry.user.displayName}</h4>
+                  <p className="text-[11px] text-muted-foreground font-mono">@{entry.user.username}</p>
+                  <p className="text-[10px] text-indigo-400 font-semibold">{entry.user.department || entry.user.college}</p>
+                </div>
               </div>
-            </div>
-            <span className="text-xs font-bold truncate max-w-[100px]">{top3[2].user.displayName}</span>
-            <span className="text-[11px] font-mono text-muted-foreground">{top3[2].score} XP</span>
-            <div className="w-full h-18 mt-2 rounded-t-2xl bg-gradient-to-t from-amber-950/40 to-amber-800/20 border-t border-amber-700/30 flex items-center justify-center font-bold text-amber-600">
-              #3
-            </div>
+
+              <div className="pt-2 border-t border-border/50 flex items-center justify-between">
+                <LevelBadge level={entry.user.level || 1} size="sm" />
+                <span className="font-mono text-xs font-bold text-amber-400">{entry.score} XP</span>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Ranks 4+ Table */}
+      {remaining.length > 0 && (
+        <Card className="overflow-hidden border-border/80">
+          <div className="divide-y divide-border/60">
+            {remaining.map((entry) => (
+              <div
+                key={entry.user.id}
+                className="p-3.5 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-6 font-mono font-bold text-xs text-muted-foreground">
+                    #{entry.rank}
+                  </span>
+                  <Avatar src={entry.user.avatarUrl} fallback={entry.user.displayName} size="sm" />
+                  <div className="min-w-0">
+                    <Link to={`/profile/${entry.user.username}`} className="text-xs font-bold text-foreground hover:underline truncate block">
+                      {entry.user.displayName}
+                    </Link>
+                    <span className="text-[11px] text-muted-foreground">{entry.user.department || entry.user.college}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <LevelBadge level={entry.user.level || 1} size="sm" />
+                  <span className="font-mono text-xs font-bold text-indigo-400">{entry.score} XP</span>
+                  <button
+                    onClick={() => setSelectedUser({ id: entry.user.id, username: entry.user.username })}
+                    title="View Score Breakdown"
+                    className="text-muted-foreground hover:text-foreground text-xs cursor-pointer"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* Leaderboard Table List */}
-      <Card>
-        <CardContent className="p-0 divide-y divide-border/60">
-          {entries.map((entry) => (
-            <div
-              key={entry.user.id}
-              className="flex items-center justify-between p-4 hover:bg-muted/40 transition-colors"
-            >
-              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                <div className="w-8 text-center font-black text-sm font-mono text-muted-foreground">
-                  #{entry.rank}
-                </div>
-                <Avatar src={entry.user.avatarUrl} fallback={entry.user.displayName} size="md" />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-bold text-foreground truncate">{entry.user.displayName}</h4>
-                    <span className="text-xs text-muted-foreground hidden sm:inline">@{entry.user.username}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {entry.user.college} · {entry.user.department}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
-                <div className="hidden md:block">
-                  <LevelBadge level={entry.user.level || 1} size="sm" />
-                </div>
-
-                <div className="text-right font-mono">
-                  <span className="text-sm font-black text-foreground">{entry.score}</span>
-                  <span className="text-[10px] text-muted-foreground ml-1">XP</span>
-                </div>
-
-                <div className="w-5 text-center">
-                  {entry.trend === 'UP' && <TrendingUp className="w-4 h-4 text-emerald-400" />}
-                  {entry.trend === 'DOWN' && <TrendingDown className="w-4 h-4 text-rose-400" />}
-                  {entry.trend === 'SAME' && <Minus className="w-4 h-4 text-muted-foreground" />}
-                </div>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      {/* Score Breakdown Modal */}
+      {selectedUser && (
+        <ScoreBreakdownModal
+          isOpen={!!selectedUser}
+          onClose={() => setSelectedUser(null)}
+          userId={selectedUser.id}
+          username={selectedUser.username}
+        />
+      )}
     </div>
   );
 }

@@ -45,3 +45,9 @@ docker-data/
 
 # Generated files
 *.generated.*
+# Local VYNK database snapshots
+apps/api/data/
+data/vynk_db.json
+
+# Turborepo cache
+.turbo/

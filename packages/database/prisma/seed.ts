@@ -1,3 +1,7 @@
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 import { PrismaClient, Role, SkillProficiency, VynkStatus, PostType, CrewRole, QuestDifficulty, MentorshipStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -308,6 +312,7 @@ async function main() {
       technologies: ['PyTorch', 'WebAssembly', 'WebRTC', 'React', 'FastAPI', 'pgvector'],
       githubUrl: 'https://github.com/mayalin-ai/neurovision-edge',
       demoUrl: 'https://neurovision-demo.vercel.app',
+      category: 'Healthcare',
       status: 'HACKATHON_WINNER',
       xpRewarded: 500,
       likesCount: 142,

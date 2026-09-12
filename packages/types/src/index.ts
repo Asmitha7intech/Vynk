@@ -2,7 +2,7 @@
 // VYNK PRODUCTION CANONICAL DOMAIN TYPES
 // -------------------------------------------------------------
 
-export type Role = 'STUDENT' | 'MENTOR' | 'MODERATOR' | 'ORGANIZATION' | 'ADMIN' | 'SUPER_ADMIN';
+export type Role = 'STUDENT' | 'MENTOR' | 'MODERATOR' | 'CAMPUS_ADMIN' | 'VYNK_ADMIN' | 'ORGANIZATION' | 'ADMIN' | 'SUPER_ADMIN';
 
 export type VynkStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'BLOCKED';
 
@@ -549,4 +549,39 @@ export interface PaginatedResponse<T> {
   page: number;
   limit: number;
   hasMore: boolean;
+}
+
+
+export interface Department {
+  id: string;
+  institutionId: string;
+  name: string;
+  code: string;
+  studentCount?: number;
+  createdAt: string;
+}
+
+export interface CrossDepartmentMatch {
+  user: User;
+  sharedInterests: string[];
+  complementarySkills: string[];
+  department: string;
+  matchScore: number;
+  matchReason: string;
+}
+
+export interface ScoreBreakdownFactor {
+  category: string;
+  xpContribution: number;
+  description: string;
+  percentageOfTotal: number;
+}
+
+export interface UserRankExplanation {
+  rank: number;
+  totalXp: number;
+  scope: LeaderboardScope;
+  factors: ScoreBreakdownFactor[];
+  xpToNextRank: number;
+  streakBonusApplied: number;
 }

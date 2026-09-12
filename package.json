@@ -10,14 +10,17 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
+    "generate:bigdata": "node scripts/generate-bigdata.js",
     "db:generate": "pnpm --filter @vynk/database db:generate",
     "db:push": "pnpm --filter @vynk/database db:push",
-    "db:seed": "pnpm --filter @vynk/database db:seed"
+    "db:seed": "pnpm --filter @vynk/database db:seed",
+    "doctor": "node scripts/doctor.js",
+    "vynk:doctor": "node scripts/doctor.js"
   },
   "devDependencies": {
+    "rimraf": "^6.0.1",
     "turbo": "^2.4.4",
-    "typescript": "^5.7.3",
-    "rimraf": "^6.0.1"
+    "typescript": "^5.7.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -27,5 +30,8 @@
       "prisma",
       "bcryptjs"
     ]
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.8"
   }
 }

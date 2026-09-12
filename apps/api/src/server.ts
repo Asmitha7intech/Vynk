@@ -20,18 +20,31 @@ import { messagesController } from './controllers/messages.controller';
 import { adminController } from './controllers/admin.controller';
 import { analyticsController } from './controllers/analytics.controller';
 import { eventsController } from './controllers/events.controller';
+import { storageController } from './controllers/storage.controller';
+import { institutionsController } from './controllers/institutions.controller';
+import { bigDataController } from './controllers/bigdata.controller';
 
 export async function buildServer() {
-  const fastify = Fastify({
-    logger: config.nodeEnv === 'development' ? {
-      transport: {
-        target: 'pino-pretty',
-        options: {
-          translateTime: 'HH:MM:ss Z',
-          ignore: 'pid,hostname',
+    let loggerOption: any = true;
+  if (config.nodeEnv === 'development') {
+    try {
+      require.resolve('pino-pretty');
+      loggerOption = {
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            translateTime: 'HH:MM:ss Z',
+            ignore: 'pid,hostname',
+          },
         },
-      },
-    } : true,
+      };
+    } catch {
+      loggerOption = { level: 'info' };
+    }
+  }
+
+  const fastify = Fastify({
+    logger: loggerOption,
   });
 
   // Global Middleware & Plugins
@@ -78,6 +91,9 @@ export async function buildServer() {
     fastify.register(adminController, { prefix: `${prefix}/admin` });
     fastify.register(analyticsController, { prefix: `${prefix}/analytics` });
     fastify.register(eventsController, { prefix: `${prefix}/events` });
+    fastify.register(storageController, { prefix: `${prefix}/storage` });
+    fastify.register(institutionsController, { prefix: `${prefix}/institutions` });
+    fastify.register(bigDataController, { prefix: `${prefix}/analytics/bigdata` });
   };
 
   // Register both /api/v1 (primary) and /api (alias)

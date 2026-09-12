@@ -30,4 +30,9 @@ export async function crewsController(fastify: FastifyInstance) {
     const updated = await crewService.updateAgreement(request.params.id, parsed);
     return reply.send({ success: true, data: updated });
   });
+
+  fastify.post('/:id/sign-agreement', { preHandler: [(fastify as any).authenticate] }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    const updated = await crewService.signTeamAgreement(request.params.id, request.userPayload!.userId);
+    return reply.send({ success: true, data: updated, message: 'Team agreement signed successfully' });
+  });
 }

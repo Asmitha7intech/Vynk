@@ -27,30 +27,44 @@ export function AuthPage() {
     setIsLoading(true);
     setErrorMessage('');
 
+    if (!isLogin && password.length < 8) {
+      setErrorMessage('Password must be at least 8 characters long.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       if (isLogin) {
-        const res = await api.login({ email, password });
+        const res = await api.login({ email: email.trim().toLowerCase(), password });
         if (res?.user && res?.accessToken) {
           login(res.user, res.accessToken);
           navigate('/');
         }
       } else {
+        const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+        if (cleanUsername.length < 3) {
+          setErrorMessage('Username must be at least 3 characters (letters, numbers, underscores).');
+          setIsLoading(false);
+          return;
+        }
+
         const res = await api.register({
-          email,
+          email: email.trim().toLowerCase(),
           password,
-          username: username.toLowerCase().replace(/[^a-z0-9_]/g, ''),
-          displayName,
-          college,
-          department,
-          graduationYear: Number(graduationYear),
+          username: cleanUsername,
+          displayName: displayName.trim(),
+          college: college.trim(),
+          department: department.trim(),
+          graduationYear: Number(graduationYear) || 2026,
         });
+
         if (res?.user && res?.accessToken) {
           login(res.user, res.accessToken);
           navigate('/');
         }
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Authentication failed. Please check credentials.');
+      setErrorMessage(err.message || 'Authentication failed. Please check your inputs.');
     } finally {
       setIsLoading(false);
     }
@@ -60,10 +74,12 @@ export function AuthPage() {
     <div className="min-h-[80vh] flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md space-y-6">
         {/* Brand Header */}
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-sky-500 to-indigo-600 flex items-center justify-center text-white font-black text-2xl mx-auto shadow-xl shadow-indigo-500/20">
-            V
-          </div>
+        <div className="text-center space-y-3">
+          <img
+            src="/vynk-logo.png"
+            alt="VYNK Logo"
+            className="w-16 h-16 object-contain rounded-2xl mx-auto shadow-xl shadow-indigo-500/25 ring-1 ring-indigo-500/30"
+          />
           <h1 className="text-2xl font-black tracking-tight">
             {isLogin ? 'Welcome Back to VYNK' : 'Join the Student Network'}
           </h1>
@@ -74,9 +90,12 @@ export function AuthPage() {
 
         <Card className="p-6 border-indigo-500/20">
           {errorMessage && (
-            <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{errorMessage}</span>
+            <div className="mb-4 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-bold">Authentication Notice</p>
+                <p className="leading-relaxed">{errorMessage}</p>
+              </div>
             </div>
           )}
 
@@ -90,14 +109,21 @@ export function AuthPage() {
               required
             />
 
-            <Input
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div className="space-y-1">
+              <Input
+                label="Password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              {!isLogin && (
+                <p className="text-[10px] text-muted-foreground">
+                  Must be at least 8 characters.
+                </p>
+              )}
+            </div>
 
             {!isLogin && (
               <>

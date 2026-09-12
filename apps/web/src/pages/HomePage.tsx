@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FeedCard } from '../components/FeedCard';
 import { DailyQuestWidget } from '../components/DailyQuestWidget';
+import { CrossDepartmentDiscovery } from '../components/CrossDepartmentDiscovery';
 import { api } from '../lib/api';
 import { Post, DailyChallenge } from '@vynk/types';
 import { Sparkles, Layers, Shield, Rocket, Flame, MessageSquare, Compass } from 'lucide-react';

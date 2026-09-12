@@ -1,8 +1,16 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { userService } from '../services/user.service';
+import { crossDepartmentService } from '../services/cross-department.service';
 import { updateProfileSchema, addSkillSchema } from '@vynk/validation';
 
 export async function usersController(fastify: FastifyInstance) {
+
+  fastify.get('/cross-department', { preHandler: [(fastify as any).authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = request.userPayload!.userId;
+    const matches = await crossDepartmentService.getCrossDepartmentMatches(userId, 10);
+    return reply.send({ success: true, data: matches });
+  });
+
   fastify.get('/search', async (request: FastifyRequest<{ Querystring: { q?: string } }>, reply: FastifyReply) => {
     const query = request.query.q || '';
     const users = await userService.search(query);

@@ -11,6 +11,8 @@ enum Role {
   STUDENT
   MENTOR
   MODERATOR
+  CAMPUS_ADMIN
+  VYNK_ADMIN
   ORGANIZATION
   ADMIN
   SUPER_ADMIN
@@ -99,6 +101,7 @@ model User {
   availableFor            String?
   isAvailableForCrews     Boolean      @default(true)
   isAvailableForMentorship Boolean     @default(false)
+  isAmbassador            Boolean     @default(false)
   
   createdAt               DateTime     @default(now())
   updatedAt               DateTime     @updatedAt
@@ -143,6 +146,7 @@ model User {
   eventRegistrations      EventRegistration[]
   communityMemberships    CommunityMember[]
   searchHistories         SearchHistory[]
+  studentVerification     StudentVerification?
 
   @@index([username])
   @@index([email])
@@ -761,4 +765,54 @@ model Report {
 
   @@index([status])
   @@index([reporterId])
+}
+
+
+// -------------------------------------------------------------
+// INSTITUTIONS & CAMPUS VERIFICATION
+// -------------------------------------------------------------
+
+model Institution {
+  id               String   @id @default(uuid())
+  name             String   @unique
+  slug             String   @unique
+  domains          String[] @default([]) // e.g. ["mit.edu", "stanford.edu", "citchennai.net"]
+  logoUrl          String?
+  city             String?
+  country          String   @default("US")
+  isApproved       Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  departments          Department[]
+  studentVerifications StudentVerification[]
+
+  @@index([slug])
+}
+
+model StudentVerification {
+  id                 String      @id @default(uuid())
+  userId             String      @unique
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institutionId      String
+  institution        Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  campusEmail        String
+  verificationStatus String      @default("PENDING") // PENDING | VERIFIED | REJECTED
+  verifiedAt         DateTime?
+  createdAt          DateTime    @default(now())
+
+  @@index([institutionId])
+  @@index([userId])
+}
+
+model Department {
+  id            String       @id @default(uuid())
+  institutionId String
+  institution   Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  name          String
+  code          String
+  studentCount  Int          @default(0)
+  createdAt     DateTime     @default(now())
+
+  @@unique([institutionId, code])
+  @@index([institutionId])
 }
