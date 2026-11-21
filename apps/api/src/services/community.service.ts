@@ -21,7 +21,23 @@ export const communityService = {
     avatarUrl?: string;
     bannerUrl?: string;
     isPrivate?: boolean;
+    enforceRateLimit?: boolean;
   }) => {
+    // Rate limit: max 3 communities per user per 24 hours
+    // Enforced in production/development, or when explicitly requested in test suites
+    if (process.env.NODE_ENV !== 'test' || data.enforceRateLimit) {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const recentCreatedCount = await prisma.community.count({
+        where: {
+          creatorId: userId,
+          createdAt: { gte: oneDayAgo },
+        },
+      });
+      if (recentCreatedCount >= 3) {
+        throw new Error('Daily limit reached: You can create a maximum of 3 communities per 24 hours.');
+      }
+    }
+
     let baseSlug = slugify(data.name);
     let slug = baseSlug;
     let counter = 1;
@@ -211,8 +227,16 @@ export const communityService = {
       }));
     }
 
+    // Sort strictly by real member count descending, tie-breaking by createdAt desc
+    const sortedItems = [...enrichedItems].sort((a: any, b: any) => {
+      const aCount = a._count?.members || a.members?.length || 0;
+      const bCount = b._count?.members || b.members?.length || 0;
+      if (bCount !== aCount) return bCount - aCount;
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+
     return {
-      items: enrichedItems,
+      items: sortedItems,
       meta: {
         total,
         page,

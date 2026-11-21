@@ -263,11 +263,11 @@ export function CommunitiesPage() {
       ) : communities.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="No communities found"
+          title={search || selectedCategory !== 'ALL' ? "No communities found" : "No communities yet"}
           description={
             search || selectedCategory !== 'ALL'
               ? 'Try adjusting your search criteria or category filter.'
-              : 'Be the first student leader to launch a community or technical guild on campus!'
+              : 'Start the first one for your campus.'
           }
           actionLabel="Start First Community"
           onAction={() => setIsCreateOpen(true)}
@@ -344,19 +344,19 @@ export function CommunitiesPage() {
                 </div>
 
                 {/* Footer / Stats & Action */}
-                <div className="pt-4 mt-4 border-t border-border/50 flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
+                <div className="pt-4 mt-4 border-t border-border/50 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground min-w-0">
+                    <span className="flex items-center gap-1 shrink-0">
                       <Users className="w-3.5 h-3.5 text-indigo-400" />
                       {comm._count?.members || comm.members?.length || 1} members
                     </span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 shrink-0">
                       <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
                       {comm._count?.posts || 0} posts
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => openCommunityDetail(comm.id)}
                       className="px-3 py-1.5 rounded-xl bg-card border border-border text-xs text-foreground hover:bg-secondary transition-colors"

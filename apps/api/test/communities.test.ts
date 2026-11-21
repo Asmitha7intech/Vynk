@@ -95,14 +95,17 @@ describe('VYNK Real Communities & Campus Collaboration Service', () => {
     expect(members.some((m: any) => m.userId === anotherUserId)).toBe(false);
   });
 
-  it('searches and filters communities by category and query', async () => {
+  it('searches and filters communities by category and query, sorted by member count descending', async () => {
     const uniqueCategory = 'Startups & Innovation';
-    await communityService.create(testUserId, {
+    const c1 = await communityService.create(testUserId, {
       name: `Campus Founders ${Date.now()}`,
       description: 'Student founders and venture studio.',
       category: uniqueCategory,
       tags: ['venture', 'startups'],
     });
+
+    // Add another member to c1 to increase its member count
+    await communityService.join(anotherUserId, c1.id);
 
     const searchResult = await communityService.list({
       category: uniqueCategory,
@@ -111,5 +114,30 @@ describe('VYNK Real Communities & Campus Collaboration Service', () => {
 
     expect(searchResult.items.length).toBeGreaterThan(0);
     expect(searchResult.items.every((c: any) => c.category === uniqueCategory)).toBe(true);
+    // Verify member count descending order
+    if (searchResult.items.length >= 2) {
+      const count1 = searchResult.items[0]._count?.members || searchResult.items[0].members?.length || 0;
+      const count2 = searchResult.items[1]._count?.members || searchResult.items[1].members?.length || 0;
+      expect(count1).toBeGreaterThanOrEqual(count2);
+    }
+  });
+
+  it('enforces rate limit: maximum 3 communities per user per 24 hours', async () => {
+    const rateLimitedUserId = `user_rate_limit_${Date.now()}`;
+    for (let i = 0; i < 3; i++) {
+      await communityService.create(rateLimitedUserId, {
+        name: `Rate Limit Guild ${i}_${Date.now()}`,
+        description: 'Testing the 3-communities per 24 hour limit.',
+        enforceRateLimit: true,
+      });
+    }
+
+    await expect(
+      communityService.create(rateLimitedUserId, {
+        name: `Rate Limit Guild Overflow ${Date.now()}`,
+        description: 'Testing the 3-communities per 24 hour limit.',
+        enforceRateLimit: true,
+      })
+    ).rejects.toThrow('Daily limit reached: You can create a maximum of 3 communities per 24 hours.');
   });
 });
