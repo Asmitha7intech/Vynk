@@ -1,9 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/api';
 import { Component as SignInCard, Input } from '../components/ui/sign-in-card-2';
-import { KeyRound, CheckCircle2, AlertCircle, X, ArrowRight, ShieldCheck } from 'lucide-react';
+import { KeyRound, CheckCircle2, AlertCircle, X, ArrowRight, ShieldCheck, Calendar, Building2 } from 'lucide-react';
+
+const PRESET_COLLEGES = [
+  'Chennai Institute of Technology (CIT)',
+  'Massachusetts Institute of Technology (MIT)',
+  'Stanford University',
+  'University of California, Berkeley',
+  'Carnegie Mellon University',
+  'Other / Not Listed',
+];
 
 export function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -12,9 +21,11 @@ export function AuthPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [college, setCollege] = useState('CIT');
+  const [selectedCollege, setSelectedCollege] = useState('Chennai Institute of Technology (CIT)');
+  const [customCollege, setCustomCollege] = useState('');
   const [department, setDepartment] = useState('Computer Science');
   const [graduationYear, setGraduationYear] = useState('2026');
+  const [dob, setDob] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -31,13 +42,20 @@ export function AuthPage() {
 
   const { login } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Password Strength Computation
+  // Redirect destination after login
+  const from = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('from') || '/';
+  }, [location.search]);
+
+  // Password Strength Computation (min 10 chars)
   const passwordStrength = useMemo(() => {
     if (!password) return { score: 0, label: 'None', color: 'bg-zinc-700' };
     let score = 0;
-    if (password.length >= 8) score += 1;
-    if (password.length >= 12) score += 1;
+    if (password.length >= 10) score += 1;
+    if (password.length >= 14) score += 1;
     if (/[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)) score += 1;
     if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
 
@@ -53,13 +71,40 @@ export function AuthPage() {
     setErrorMessage('');
 
     if (!isLogin) {
-      if (password.length < 8) {
-        setErrorMessage('Password must be at least 8 characters long.');
+      if (password.length < 10) {
+        setErrorMessage('Password must be at least 10 characters long.');
         setIsLoading(false);
         return;
       }
       if (password !== confirmPassword) {
         setErrorMessage('Passwords do not match. Please verify your entries.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Age verification: must be at least 16 years old
+      if (!dob) {
+        setErrorMessage('Please provide your date of birth to verify eligibility (minimum 16 years).');
+        setIsLoading(false);
+        return;
+      }
+
+      const birthDate = new Date(dob);
+      if (isNaN(birthDate.getTime())) {
+        setErrorMessage('Invalid date of birth provided.');
+        setIsLoading(false);
+        return;
+      }
+
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+
+      if (age < 16) {
+        setErrorMessage('VYNK is designed for students aged 16 and older. Access restricted.');
         setIsLoading(false);
         return;
       }
@@ -70,7 +115,11 @@ export function AuthPage() {
         const res = await api.login({ email: email.trim().toLowerCase(), password });
         if (res?.user && res?.accessToken) {
           login(res.user, res.accessToken, res.refreshToken);
-          navigate('/');
+          if (res.user.mustChangePassword) {
+            navigate('/change-password');
+          } else {
+            navigate(from);
+          }
         }
       } else {
         const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -80,19 +129,27 @@ export function AuthPage() {
           return;
         }
 
+        const resolvedCollege = selectedCollege === 'Other / Not Listed'
+          ? (customCollege.trim() || 'Other')
+          : selectedCollege;
+
         const res = await api.register({
           email: email.trim().toLowerCase(),
           password,
           username: cleanUsername,
           displayName: displayName.trim() || cleanUsername,
-          college: college.trim(),
+          college: resolvedCollege,
           department: department.trim(),
           graduationYear: Number(graduationYear) || 2026,
         });
 
         if (res?.user && res?.accessToken) {
           login(res.user, res.accessToken, res.refreshToken);
-          navigate('/');
+          if (res.user.mustChangePassword) {
+            navigate('/change-password');
+          } else {
+            navigate(from);
+          }
         }
       }
     } catch (err: any) {
@@ -117,8 +174,8 @@ export function AuthPage() {
         }
         setForgotStep('RESET');
       } else if (forgotStep === 'RESET') {
-        if (newPassword.length < 8) {
-          setForgotError('New password must be at least 8 characters.');
+        if (newPassword.length < 10) {
+          setForgotError('New password must be at least 10 characters.');
           setForgotLoading(false);
           return;
         }
@@ -128,12 +185,12 @@ export function AuthPage() {
           return;
         }
 
-        const res = await api.resetPassword(resetToken.trim(), newPassword);
-        setForgotSuccess(res.message || 'Password updated successfully!');
+        const res = await api.resetPassword(resetToken, newPassword);
+        setForgotSuccess(res.message || 'Password reset successfully.');
         setForgotStep('DONE');
       }
     } catch (err: any) {
-      setForgotError(err.message || 'Request failed. Please try again.');
+      setForgotError(err.message || 'Failed to process request.');
     } finally {
       setForgotLoading(false);
     }
@@ -146,7 +203,7 @@ export function AuthPage() {
           <label className="text-[11px] font-semibold text-white/70">Username</label>
           <Input
             type="text"
-            placeholder="alexchen"
+            placeholder="campus_builder"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
@@ -157,7 +214,7 @@ export function AuthPage() {
           <label className="text-[11px] font-semibold text-white/70">Display Name</label>
           <Input
             type="text"
-            placeholder="Alex Chen"
+            placeholder="Your Name"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             required
@@ -166,18 +223,39 @@ export function AuthPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5">
-        <div className="space-y-1">
-          <label className="text-[11px] font-semibold text-white/70">College / Univ</label>
+      {/* College Selection */}
+      <div className="space-y-1">
+        <label className="text-[11px] font-semibold text-white/70 flex items-center gap-1.5">
+          <Building2 className="w-3.5 h-3.5 text-indigo-400" /> College / Institution
+        </label>
+        <select
+          value={selectedCollege}
+          onChange={(e) => setSelectedCollege(e.target.value)}
+          className="w-full bg-[#181822] border border-white/10 text-white h-10 text-xs px-3 rounded-xl focus:border-indigo-400 focus:outline-none"
+        >
+          {PRESET_COLLEGES.map((c) => (
+            <option key={c} value={c} className="bg-[#181822] text-white">
+              {c}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {selectedCollege === 'Other / Not Listed' && (
+        <div className="space-y-1 animate-in fade-in duration-200">
+          <label className="text-[11px] font-semibold text-white/70">Enter Your Institution Name</label>
           <Input
             type="text"
-            placeholder="CIT"
-            value={college}
-            onChange={(e) => setCollege(e.target.value)}
+            placeholder="e.g. National Institute of Technology"
+            value={customCollege}
+            onChange={(e) => setCustomCollege(e.target.value)}
             required
             className="w-full bg-white/5 border-white/10 text-white placeholder:text-white/30 h-10 text-xs px-3 rounded-xl focus:border-indigo-400"
           />
         </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-2.5">
         <div className="space-y-1">
           <label className="text-[11px] font-semibold text-white/70">Department</label>
           <Input
@@ -189,15 +267,31 @@ export function AuthPage() {
             className="w-full bg-white/5 border-white/10 text-white placeholder:text-white/30 h-10 text-xs px-3 rounded-xl focus:border-indigo-400"
           />
         </div>
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold text-white/70">Graduation Year</label>
+          <Input
+            type="number"
+            placeholder="2026"
+            value={graduationYear}
+            onChange={(e) => setGraduationYear(e.target.value)}
+            required
+            className="w-full bg-white/5 border-white/10 text-white placeholder:text-white/30 h-10 text-xs px-3 rounded-xl focus:border-indigo-400"
+          />
+        </div>
       </div>
 
+      {/* Date of Birth (Age Gate 16) */}
       <div className="space-y-1">
-        <label className="text-[11px] font-semibold text-white/70">Graduation Year</label>
+        <label className="text-[11px] font-semibold text-white/70 flex items-center justify-between">
+          <span className="flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-indigo-400" /> Date of Birth
+          </span>
+          <span className="text-[10px] text-muted-foreground font-normal">Must be 16+</span>
+        </label>
         <Input
-          type="number"
-          placeholder="2026"
-          value={graduationYear}
-          onChange={(e) => setGraduationYear(e.target.value)}
+          type="date"
+          value={dob}
+          onChange={(e) => setDob(e.target.value)}
           required
           className="w-full bg-white/5 border-white/10 text-white placeholder:text-white/30 h-10 text-xs px-3 rounded-xl focus:border-indigo-400"
         />
@@ -233,6 +327,7 @@ export function AuthPage() {
                 />
               ))}
             </div>
+            <p className="text-[10px] text-muted-foreground">Min 10 characters with upper/lower, numbers, and symbols.</p>
           </div>
         )}
       </div>
@@ -301,27 +396,28 @@ export function AuthPage() {
 
             {forgotStep === 'EMAIL' && (
               <form onSubmit={handleForgotSubmit} className="space-y-4">
-                <p className="text-xs text-white/70 leading-relaxed">
-                  Enter your registered campus or personal email address. We will generate a secure reset authorization token.
-                </p>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-white/70">Account Email</label>
+                  <label className="text-[11px] font-semibold text-white/70">Your Registered Email</label>
                   <Input
                     type="email"
-                    placeholder="student@mit.edu"
+                    required
+                    placeholder="you@college.edu"
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
-                    required
-                    className="w-full bg-white/5 border-white/10 text-white placeholder:text-white/30 h-11 text-xs px-3 rounded-xl focus:border-indigo-400"
+                    className="w-full bg-white/5 border-white/10 text-white placeholder:text-white/30 h-10 text-xs px-3 rounded-xl focus:border-indigo-400"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={forgotLoading}
-                  className="w-full h-11 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-indigo-600/30"
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                 >
-                  {forgotLoading ? 'Processing...' : 'Send Recovery Token'}
-                  <ArrowRight className="w-4 h-4" />
+                  {forgotLoading ? 'Processing...' : (
+                    <>
+                      <span>Continue</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </form>
             )}
@@ -329,24 +425,24 @@ export function AuthPage() {
             {forgotStep === 'RESET' && (
               <form onSubmit={handleForgotSubmit} className="space-y-3.5">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-white/70">Reset Authorization Token</label>
+                  <label className="text-[11px] font-semibold text-white/70">Reset Token</label>
                   <Input
                     type="text"
-                    placeholder="Paste or enter reset token"
+                    required
+                    placeholder="Enter reset token"
                     value={resetToken}
                     onChange={(e) => setResetToken(e.target.value)}
-                    required
-                    className="w-full bg-white/5 border-white/10 text-white placeholder:text-white/30 h-10 text-xs px-3 rounded-xl font-mono focus:border-indigo-400"
+                    className="w-full bg-white/5 border-white/10 text-white placeholder:text-white/30 h-10 text-xs px-3 rounded-xl focus:border-indigo-400 font-mono"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-white/70">New Password (min 8 chars)</label>
+                  <label className="text-[11px] font-semibold text-white/70">New Password (min 10 characters)</label>
                   <Input
                     type="password"
-                    placeholder="Enter new strong password"
+                    required
+                    placeholder="New password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    required
                     className="w-full bg-white/5 border-white/10 text-white placeholder:text-white/30 h-10 text-xs px-3 rounded-xl focus:border-indigo-400"
                   />
                 </div>
@@ -354,42 +450,37 @@ export function AuthPage() {
                   <label className="text-[11px] font-semibold text-white/70">Confirm New Password</label>
                   <Input
                     type="password"
+                    required
                     placeholder="Repeat new password"
                     value={confirmNewPassword}
                     onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    required
                     className="w-full bg-white/5 border-white/10 text-white placeholder:text-white/30 h-10 text-xs px-3 rounded-xl focus:border-indigo-400"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={forgotLoading}
-                  className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-600/30 mt-2"
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                 >
-                  {forgotLoading ? 'Updating Password...' : 'Set New Password'}
-                  <ShieldCheck className="w-4 h-4" />
+                  {forgotLoading ? 'Resetting Password...' : (
+                    <>
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Confirm New Password</span>
+                    </>
+                  )}
                 </button>
               </form>
             )}
 
             {forgotStep === 'DONE' && (
-              <div className="text-center py-4 space-y-4">
-                <div className="w-12 h-12 mx-auto rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-white">Password Successfully Reset</h4>
-                  <p className="text-xs text-white/60">
-                    All prior active sessions have been terminated. You can now sign in with your new password.
-                  </p>
-                </div>
+              <div className="text-center space-y-4 pt-2">
+                <p className="text-xs text-white/80 leading-relaxed">
+                  Your password has been reset securely. You can now close this dialog and log in with your new credentials.
+                </p>
                 <button
-                  onClick={() => {
-                    setShowForgotModal(false);
-                    setIsLogin(true);
-                    setPassword('');
-                  }}
-                  className="w-full h-10 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors"
                 >
                   Return to Sign In
                 </button>

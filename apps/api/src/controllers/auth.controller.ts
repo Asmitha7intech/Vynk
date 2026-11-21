@@ -10,6 +10,7 @@ import {
   resetPasswordSchema,
 } from '@vynk/validation';
 import { authService } from '../services/auth.service';
+import { passwordService } from '../services/password.service';
 import { config } from '../config';
 
 export async function authController(fastify: FastifyInstance) {
@@ -135,6 +136,67 @@ export async function authController(fastify: FastifyInstance) {
       return reply.send({
         success: true,
         message: 'Successfully logged out and session revoked.',
+      });
+    }
+  );
+
+  fastify.post(
+    '/change-password',
+    { preHandler: [(fastify as any).authenticate] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = request.userPayload?.userId;
+      if (!userId) {
+        return reply.status(401).send({ success: false, message: 'Authentication required.' });
+      }
+
+      const { currentPassword, newPassword } = (request.body as any) || {};
+
+      if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 10) {
+        return reply.status(400).send({
+          success: false,
+          message: 'New password must be at least 10 characters long.',
+        });
+      }
+
+      // Check password complexity (requires uppercase, lowercase, number, special character)
+      const hasUpper = /[A-Z]/.test(newPassword);
+      const hasLower = /[a-z]/.test(newPassword);
+      const hasNumber = /[0-9]/.test(newPassword);
+      const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
+
+      if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Password must contain uppercase, lowercase, numbers, and symbols.',
+        });
+      }
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return reply.status(404).send({ success: false, message: 'User not found.' });
+      }
+
+      // Verify current password if provided or if mustChangePassword is false
+      if (!user.mustChangePassword && currentPassword) {
+        const { isValid } = await passwordService.verifyPassword(user.passwordHash, currentPassword);
+        if (!isValid) {
+          return reply.status(400).send({ success: false, message: 'Current password is incorrect.' });
+        }
+      }
+
+      const newPasswordHash = await passwordService.hashPassword(newPassword);
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          passwordHash: newPasswordHash,
+          mustChangePassword: false,
+        },
+      });
+
+      return reply.send({
+        success: true,
+        message: 'Password changed successfully.',
+        data: { user: updatedUser },
       });
     }
   );

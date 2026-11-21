@@ -679,12 +679,12 @@ describe('VYNK Master Directive — Complete Engineering & Acceptance Verificati
       if (loginRes.statusCode === 200) {
         adminToken = loginRes.json().data.accessToken;
       } else {
-        // Fallback: manually sign JWT with role ADMIN
+        const adminUser = await prisma.user.findFirst({ where: { role: 'SUPER_ADMIN' } });
         adminToken = (app as any).jwt.sign({
-          userId: admin.id,
-          email: admin.email,
-          username: admin.username,
-          role: 'ADMIN',
+          userId: adminUser?.id || 'owner-asmitha-canonical',
+          email: adminEmail,
+          username: 'asmitha',
+          role: 'SUPER_ADMIN',
         });
       }
     });
