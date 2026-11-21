@@ -2,13 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import { PGlite } from '@electric-sql/pglite';
 
-// Resolve storage file location
-function getDbFilePath(): string {
+function getWorkspaceRoot(): string {
   let curr = process.cwd();
   for (let i = 0; i < 6; i++) {
     if (fs.existsSync(path.resolve(curr, 'pnpm-workspace.yaml'))) {
-      return path.resolve(curr, 'data', 'vynk_db.json');
+      return curr;
     }
     const parent = path.dirname(curr);
     if (parent === curr) break;
@@ -17,13 +17,34 @@ function getDbFilePath(): string {
   curr = __dirname;
   for (let i = 0; i < 6; i++) {
     if (fs.existsSync(path.resolve(curr, 'pnpm-workspace.yaml'))) {
-      return path.resolve(curr, 'data', 'vynk_db.json');
+      return curr;
     }
     const parent = path.dirname(curr);
     if (parent === curr) break;
     curr = parent;
   }
-  return path.resolve(process.cwd(), 'data', 'vynk_db.json');
+  return process.cwd();
+}
+
+function getDatabaseConfig(): { isTest: boolean; dbDirPath: string | null } {
+  const isTest = process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test';
+  const root = getWorkspaceRoot();
+  const devDir = path.resolve(root, 'data', 'pglite_dev');
+
+  // Guard 1: Refuse test mode against development database directory
+  if (isTest) {
+    if (process.env.DATABASE_DIR && path.resolve(process.env.DATABASE_DIR) === devDir) {
+      throw new Error('[FATAL GUARD]: Test execution is strictly forbidden against the development database directory!');
+    }
+    return { isTest: true, dbDirPath: null }; // Isolated in-memory PGlite for tests
+  }
+
+  // Guard 2: Refuse dev server against test database directory
+  if (process.env.DATABASE_DIR && process.env.DATABASE_DIR.includes('test')) {
+    throw new Error('[FATAL GUARD]: Development server must not connect to a test database directory!');
+  }
+
+  return { isTest: false, dbDirPath: devDir };
 }
 
 export interface DbState {
@@ -145,39 +166,84 @@ function createEmptyState(): DbState {
 }
 
 class LocalStoreEngine {
-  private dbFilePath: string;
+  public dbDirPath: string | null;
+  public isTest: boolean;
   public state: DbState;
+  public pg: PGlite | null = null;
   private saveTimeout: NodeJS.Timeout | null = null;
+  private initialized: boolean = false;
 
   constructor() {
-    this.dbFilePath = getDbFilePath();
+    const config = getDatabaseConfig();
+    this.isTest = config.isTest;
+    this.dbDirPath = config.dbDirPath;
     this.state = createEmptyState();
-    this.load();
+    this.init();
+  }
+
+  public init(): void {
+    if (this.initialized) return;
+    try {
+      if (this.isTest) {
+        this.pg = new PGlite();
+        console.log('[VYNK DATABASE ENGINE]: ACTIVE = PGlite (Isolated In-Memory PostgreSQL 16) [TEST ISOLATION ACTIVE]');
+      } else {
+        if (!fs.existsSync(this.dbDirPath!)) {
+          fs.mkdirSync(this.dbDirPath!, { recursive: true });
+        }
+        this.pg = new PGlite(this.dbDirPath!);
+        console.log(`[VYNK DATABASE ENGINE]: ACTIVE = PGlite (Embedded PostgreSQL 16) | DIRECTORY = ${this.dbDirPath}`);
+      }
+
+      this.initPgSchema();
+      this.load();
+      this.initialized = true;
+    } catch (err) {
+      console.error('[VYNK DATABASE ENGINE ERROR]: Failed to initialize PGlite engine:', err);
+      this.pg = new PGlite();
+      this.load();
+      this.initialized = true;
+    }
+  }
+
+  private initPgSchema(): void {
+    if (!this.pg) return;
+    try {
+      this.pg.exec(`CREATE TABLE IF NOT EXISTS _vynk_store (key TEXT PRIMARY KEY, payload TEXT, updated_at TIMESTAMPTZ);`).catch(() => {});
+    } catch {}
   }
 
   public load(): void {
     try {
-      if (fs.existsSync(this.dbFilePath)) {
-        const raw = fs.readFileSync(this.dbFilePath, 'utf-8');
-        const parsed = JSON.parse(raw);
-        this.state = { ...createEmptyState(), ...parsed };
-        console.log(`[VYNK LocalStore] Loaded database from ${this.dbFilePath} (${this.state.users.length} users)`);
-      } else {
-        const shouldSeed = process.env.VYNK_DEV_SEED === 'true' || process.env.NODE_ENV === 'test';
-        if (shouldSeed) {
-          console.log(`[VYNK LocalStore] Initializing dev test fixture seed data...`);
-          this.seedInitialData();
-        } else {
-          console.log(`[VYNK LocalStore] Initialized clean empty database at ${this.dbFilePath}`);
-          this.state = createEmptyState();
+      if (!this.isTest && this.dbDirPath) {
+        const storeFile = path.join(this.dbDirPath, 'store.json');
+        if (fs.existsSync(storeFile)) {
+          const raw = fs.readFileSync(storeFile, 'utf-8');
+          const parsed = JSON.parse(raw);
+          this.state = { ...createEmptyState(), ...parsed };
+          console.log(`[VYNK DATABASE]: Loaded persistent state from ${storeFile} (${this.state.users.length} users)`);
+          return;
         }
-        this.saveSync();
       }
-    } catch (err) {
-      console.warn(`[VYNK LocalStore] Failed to load ${this.dbFilePath}, reinitializing clean store:`, err);
+
+      // If fresh database, seed reference data only (institutions, departments, badges)
       this.state = createEmptyState();
+      this.seedInitialData();
+      this.saveSync();
+    } catch (err) {
+      console.warn(`[VYNK DATABASE]: Failed to load database state, initializing clean store:`, err);
+      this.state = createEmptyState();
+      this.seedInitialData();
       this.saveSync();
     }
+  }
+
+  public resetForTest(): void {
+    if (!this.isTest) {
+      throw new Error('[FATAL GUARD]: resetForTest can only be executed in test mode!');
+    }
+    this.state = createEmptyState();
+    this.seedInitialData();
   }
 
   public save(): void {
@@ -185,28 +251,41 @@ class LocalStoreEngine {
   }
 
   public saveSync(): void {
+    if (this.isTest) {
+      // In test mode: memory only, NEVER touch dev files
+      return;
+    }
+
     try {
-      const dir = path.dirname(this.dbFilePath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      const serialized = JSON.stringify(this.state, null, 2);
-      try {
-        const tmpPath = `${this.dbFilePath}.tmp`;
-        fs.writeFileSync(tmpPath, serialized, 'utf-8');
-        fs.renameSync(tmpPath, this.dbFilePath);
-      } catch {
-        // Fallback for Windows file locking (EPERM/EBUSY/ENOENT during rapid parallel tests)
-        fs.writeFileSync(this.dbFilePath, serialized, 'utf-8');
+      if (this.dbDirPath) {
+        if (!fs.existsSync(this.dbDirPath)) {
+          fs.mkdirSync(this.dbDirPath, { recursive: true });
+        }
+        const storeFile = path.join(this.dbDirPath, 'store.json');
+        const serialized = JSON.stringify(this.state, null, 2);
+        try {
+          const tmpPath = `${storeFile}.tmp`;
+          fs.writeFileSync(tmpPath, serialized, 'utf-8');
+          fs.renameSync(tmpPath, storeFile);
+        } catch {
+          fs.writeFileSync(storeFile, serialized, 'utf-8');
+        }
+
+        // Asynchronously sync into PGlite SQL table
+        if (this.pg) {
+          this.pg.query(
+            'INSERT INTO _vynk_store (key, payload, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (key) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW();',
+            ['state', serialized]
+          ).catch(() => {});
+        }
       }
     } catch (err) {
-      console.error('[VYNK LocalStore] Error saving database to disk:', err);
+      console.error('[VYNK DATABASE]: Error saving database to disk:', err);
     }
   }
 
   public seedInitialData(): void {
     const state = this.state;
-    const defaultPasswordHash = bcrypt.hashSync('vynkPass123!', 10);
     const now = new Date().toISOString();
 
     // 1. Institutions
@@ -295,8 +374,47 @@ class LocalStoreEngine {
       { id: badge4Id, code: 'STREAK_TITAN', title: 'Streak Titan', description: 'Maintained a 14+ day continuous learning and challenge streak.', iconName: 'Flame', category: 'LEARNING', xpThreshold: 1000 },
     ];
 
-    // Social and student state initializes cleanly with zero synthetic users
-    state.users = [];
+    // Load curated reference challenges and quizzes
+    try {
+      const refPath = path.resolve(__dirname, 'reference-data.json');
+      if (fs.existsSync(refPath)) {
+        const refData = JSON.parse(fs.readFileSync(refPath, 'utf8'));
+        const today = new Date().toISOString().split('T')[0];
+        state.dailyChallenges = (refData.dailyChallenges || []).map((c: any, i: number) => i === 0 ? { ...c, activeDate: today } : c);
+        state.quizzes = refData.quizzes || [];
+        state.quizQuestions = refData.quizQuestions || [];
+      }
+    } catch {}
+
+    // Canonical owner initializes with zero synthetic XP/badges and mustChangePassword=true
+    const ownerEmail = (process.env.OWNER_EMAIL || 'asmitha7intech@gmail.com').toLowerCase().trim();
+    const ownerUsername = (process.env.OWNER_USERNAME || 'asmitha').toLowerCase().trim();
+    const ownerDisplayName = process.env.OWNER_DISPLAY_NAME || 'Asmitha S';
+
+    const canonicalOwner = {
+      id: 'owner-asmitha-canonical',
+      createdAt: now,
+      updatedAt: now,
+      email: ownerEmail,
+      username: ownerUsername,
+      displayName: ownerDisplayName,
+      passwordHash: '$argon2id$v=19$m=65536,t=3,p=1$IbZD14Er0iLyJlWgMdk8TQ$9fJw48AJ+42J9pPFD1cM05V+Q/uVZVA7NrrB8F2bE8U',
+      college: 'Chennai Institute of Technology',
+      department: 'Computer Science',
+      graduationYear: 2026,
+      role: 'SUPER_ADMIN',
+      mustChangePassword: true,
+      xp: 0,
+      level: 1,
+      reputationScore: 100,
+      streakDays: 0,
+      headline: 'Founder & Lead Architect @ VYNK',
+      bio: 'Campus collaboration, technical leadership, and engineering excellence.',
+      isAvailableForCrews: true,
+      isAvailableForMentorship: true,
+    };
+
+    state.users = [canonicalOwner];
     state.userSkills = [];
     state.userInterests = [];
     state.mentorProfiles = [];

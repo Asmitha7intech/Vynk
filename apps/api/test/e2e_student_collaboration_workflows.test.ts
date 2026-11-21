@@ -1,7 +1,11 @@
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { buildServer } from '../src/server';
 import { FastifyInstance } from 'fastify';
 import { prisma } from '@vynk/database';
+import { generateTestPassword } from './test-helpers';
 
 describe('Phase F E2E: Full Student Collaboration & Platform Lifecycle Workflows', () => {
   let app: FastifyInstance;
@@ -23,14 +27,16 @@ describe('Phase F E2E: Full Student Collaboration & Platform Lifecycle Workflows
     await app.ready();
 
     const timestamp = Date.now();
+    const passwordA = generateTestPassword();
+    const passwordB = generateTestPassword();
 
     // 1. Authenticate canonical SuperAdmin
     const adminLogin = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/login',
       payload: {
-        email: 'asmitha7intech@gmail.com',
-        password: 'Password123!',
+        email: process.env.OWNER_EMAIL || 'asmitha7intech@gmail.com',
+        password: process.env.OWNER_INITIAL_PASSWORD,
       },
     });
     expect(adminLogin.statusCode).toBe(200);
@@ -44,7 +50,7 @@ describe('Phase F E2E: Full Student Collaboration & Platform Lifecycle Workflows
       url: '/api/v1/auth/register',
       payload: {
         email: `student.alpha.${timestamp}@citchennai.net`,
-        password: 'Password123!',
+        password: passwordA,
         username: `student_alpha_${timestamp}`,
         displayName: 'Alpha CIT Builder',
         college: 'Chennai Institute of Technology',
@@ -64,7 +70,7 @@ describe('Phase F E2E: Full Student Collaboration & Platform Lifecycle Workflows
       url: '/api/v1/auth/register',
       payload: {
         email: `student.beta.${timestamp}@citchennai.net`,
-        password: 'Password123!',
+        password: passwordB,
         username: `student_beta_${timestamp}`,
         displayName: 'Beta CIT Systems Engineer',
         college: 'Chennai Institute of Technology',

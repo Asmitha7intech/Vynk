@@ -52,6 +52,7 @@ export interface User {
   email: string;
   emailVerified?: boolean;
   isVerified?: boolean;
+  mustChangePassword?: boolean;
   username: string;
   displayName: string;
   avatarUrl?: string | null;

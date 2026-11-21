@@ -1,7 +1,11 @@
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { buildServer } from '../src/server';
 import { FastifyInstance } from 'fastify';
 import { prisma } from '@vynk/database';
+import { generateTestPassword } from './test-helpers';
 
 describe('Phase C Security Suite: IDOR, Ownership, Safety & RBAC Verification', () => {
   let app: FastifyInstance;
@@ -19,6 +23,8 @@ describe('Phase C Security Suite: IDOR, Ownership, Safety & RBAC Verification', 
     await app.ready();
 
     const timestamp = Date.now();
+    const passwordA = generateTestPassword();
+    const passwordB = generateTestPassword();
 
     // 1. Create User A
     const regA = await app.inject({
@@ -26,7 +32,7 @@ describe('Phase C Security Suite: IDOR, Ownership, Safety & RBAC Verification', 
       url: '/api/v1/auth/register',
       payload: {
         email: `idor_user_a_${timestamp}@citchennai.net`,
-        password: 'Password123!',
+        password: passwordA,
         username: `idor_a_${timestamp}`,
         displayName: 'Security Student Alpha',
         college: 'Chennai Institute of Technology',
@@ -46,7 +52,7 @@ describe('Phase C Security Suite: IDOR, Ownership, Safety & RBAC Verification', 
       url: '/api/v1/auth/register',
       payload: {
         email: `idor_user_b_${timestamp}@citchennai.net`,
-        password: 'Password123!',
+        password: passwordB,
         username: `idor_b_${timestamp}`,
         displayName: 'Security Student Beta',
         college: 'Chennai Institute of Technology',
@@ -65,8 +71,8 @@ describe('Phase C Security Suite: IDOR, Ownership, Safety & RBAC Verification', 
       method: 'POST',
       url: '/api/v1/auth/login',
       payload: {
-        email: 'asmitha7intech@gmail.com',
-        password: 'Password123!',
+        email: process.env.OWNER_EMAIL || 'asmitha7intech@gmail.com',
+        password: process.env.OWNER_INITIAL_PASSWORD,
       },
     });
     expect(adminLogin.statusCode).toBe(200);

@@ -8,6 +8,7 @@ interface AuthState {
   token: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  isInitializing: boolean;
   login: (user: User, token: string, refreshToken?: string) => void;
   setTokens: (accessToken: string, refreshToken?: string) => void;
   logout: () => Promise<void>;
@@ -22,27 +23,30 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       refreshToken: null,
       isAuthenticated: false,
+      isInitializing: true,
       initializeAuth: async () => {
         const rawToken = localStorage.getItem('vynk_access_token');
         const token = rawToken?.startsWith('Bearer ') ? rawToken.slice(7) : rawToken;
         if (!token) {
-          set({ user: null, token: null, refreshToken: null, isAuthenticated: false });
+          set({ user: null, token: null, refreshToken: null, isAuthenticated: false, isInitializing: false });
           return;
         }
         try {
           const { api } = await import('../lib/api');
           const res = await api.getCurrentUser();
           if (res?.user) {
-            set({ user: res.user, token, isAuthenticated: true });
+            set({ user: res.user, token, isAuthenticated: true, isInitializing: false });
             connectSocket(token);
+          } else {
+            set({ user: null, token: null, refreshToken: null, isAuthenticated: false, isInitializing: false });
           }
         } catch (err: any) {
           if (err?.status === 401) {
             localStorage.removeItem('vynk_access_token');
             localStorage.removeItem('vynk_refresh_token');
             disconnectSocket();
-            set({ user: null, token: null, refreshToken: null, isAuthenticated: false });
           }
+          set({ user: null, token: null, refreshToken: null, isAuthenticated: false, isInitializing: false });
         }
       },
       login: (user, token, refreshToken) => {

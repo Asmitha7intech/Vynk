@@ -32,12 +32,13 @@ async function testFullDatabaseFlow() {
 
     // 2. Register new student
     const testEmail = `asmitha_${Date.now()}@mit.edu`;
+    const testPassword = `Vynk#${Date.now()}!Test9`;
     const regRes = await server.inject({
       method: 'POST',
       url: '/api/v1/auth/register',
       payload: {
         email: testEmail,
-        password: 'Password123!',
+        password: testPassword,
         username: `asmitha_${Date.now().toString().slice(-4)}`,
         displayName: 'Asmitha S',
         college: 'Massachusetts Institute of Technology (MIT)',
@@ -57,7 +58,7 @@ async function testFullDatabaseFlow() {
       url: '/api/v1/auth/register',
       payload: {
         email: testEmail,
-        password: 'Password123!',
+        password: testPassword,
         username: 'asmitha_dup',
         displayName: 'Asmitha S',
       },
@@ -70,7 +71,7 @@ async function testFullDatabaseFlow() {
       url: '/api/v1/auth/login',
       payload: {
         email: testEmail,
-        password: 'Password123!',
+        password: testPassword,
       },
     });
     const loginBody = JSON.parse(loginRes.body);

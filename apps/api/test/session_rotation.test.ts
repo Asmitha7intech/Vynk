@@ -1,3 +1,6 @@
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 import { describe, it, expect, beforeAll } from 'vitest';
 import { buildServer } from '../src/server';
 import { FastifyInstance } from 'fastify';
@@ -16,8 +19,8 @@ describe('Rotating Refresh Tokens & Session Family Reuse Detection Suite', () =>
       method: 'POST',
       url: '/api/v1/auth/login',
       payload: {
-        email: 'asmitha7intech@gmail.com',
-        password: 'Password123!',
+        email: process.env.OWNER_EMAIL || 'asmitha7intech@gmail.com',
+        password: process.env.OWNER_INITIAL_PASSWORD,
       },
     });
 

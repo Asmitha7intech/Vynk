@@ -28,6 +28,7 @@ export const gamificationRepository = {
   getLeaderboard: (scope: string, college?: string, department?: string, limit = 50) => {
     return prisma.user.findMany({
       where: {
+        role: { notIn: ['SUPER_ADMIN', 'ADMIN'] },
         college: scope === 'COLLEGE' && college ? college : undefined,
         department: scope === 'DEPARTMENT' && department ? department : undefined,
       },

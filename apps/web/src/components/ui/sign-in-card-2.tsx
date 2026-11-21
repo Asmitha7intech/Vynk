@@ -230,7 +230,7 @@ export function SignInCard({
                     <input
                       type="email"
                       required
-                      placeholder="alex.chen@mit.edu"
+                      placeholder="you@college.edu"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       onFocus={() => setFocusedInput('email')}

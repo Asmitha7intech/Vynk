@@ -34,7 +34,9 @@ export function getWorkspaceRoot(): string {
 
 export function getUploadsDir(): string {
   const root = getWorkspaceRoot();
-  const uploadsDir = path.resolve(root, 'data', 'uploads');
+  const isTest = process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test' || typeof process.env.VITEST !== 'undefined';
+  const subDir = isTest ? 'test_uploads' : 'uploads';
+  const uploadsDir = path.resolve(root, 'data', subDir);
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }

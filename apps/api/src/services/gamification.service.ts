@@ -78,7 +78,9 @@ export const gamificationService = {
   },
 
   getLeaderboard: async (scope: LeaderboardScope, scopeFilter?: string, limit = 50) => {
-    let whereClause: any = {};
+    let whereClause: any = {
+      role: { notIn: ['SUPER_ADMIN', 'ADMIN'] },
+    };
 
     if (scope === 'COLLEGE' && scopeFilter) {
       whereClause.college = scopeFilter;

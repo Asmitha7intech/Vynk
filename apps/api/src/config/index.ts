@@ -1,6 +1,8 @@
+import path from 'path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config();
 
 const envSchema = z.object({
@@ -19,6 +21,10 @@ const envSchema = z.object({
   STORAGE_ACCESS_KEY: z.string().optional(),
   STORAGE_SECRET_KEY: z.string().optional(),
   COOKIE_SECRET: z.string().min(16).default('vynk_secure_cookie_encryption_key_2026'),
+  OWNER_EMAIL: z.string().email().default('asmitha7intech@gmail.com'),
+  OWNER_USERNAME: z.string().default('asmitha'),
+  OWNER_DISPLAY_NAME: z.string().default('Asmitha S'),
+  OWNER_INITIAL_PASSWORD: z.string().min(10).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -56,6 +62,12 @@ export const config = {
   databaseUrl: env.DATABASE_URL,
   redisUrl: env.REDIS_URL,
   cookieSecret: env.COOKIE_SECRET,
+  owner: {
+    email: env.OWNER_EMAIL,
+    username: env.OWNER_USERNAME,
+    displayName: env.OWNER_DISPLAY_NAME,
+    initialPassword: env.OWNER_INITIAL_PASSWORD,
+  },
   storage: {
     provider: env.STORAGE_PROVIDER,
     bucket: env.STORAGE_BUCKET,

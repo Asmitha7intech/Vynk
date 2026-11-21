@@ -1,7 +1,11 @@
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@vynk/database';
 import { buildServer } from '../src/server';
 import { FastifyInstance } from 'fastify';
+import { generateTestPassword } from './test-helpers';
 
 describe('VYNK Master Directive — Verification of Mutual Connections, Admin RBAC & Real Data', () => {
   let app: FastifyInstance;
@@ -23,13 +27,15 @@ describe('VYNK Master Directive — Verification of Mutual Connections, Admin RB
     app = await buildServer();
     await app.ready();
 
+    const studentPassword = generateTestPassword();
+
     // 1. Create Student 1
     const r1 = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/register',
       payload: {
         email: `student1_${suffix}@citchennai.net`,
-        password: 'Password123!',
+        password: studentPassword,
         username: `stud1_${suffix}`,
         displayName: 'Student One',
         college: 'Chennai Institute of Technology',
@@ -47,7 +53,7 @@ describe('VYNK Master Directive — Verification of Mutual Connections, Admin RB
       url: '/api/v1/auth/register',
       payload: {
         email: `student2_${suffix}@citchennai.net`,
-        password: 'Password123!',
+        password: studentPassword,
         username: `stud2_${suffix}`,
         displayName: 'Student Two',
         college: 'Chennai Institute of Technology',
@@ -65,7 +71,7 @@ describe('VYNK Master Directive — Verification of Mutual Connections, Admin RB
       url: '/api/v1/auth/register',
       payload: {
         email: `student3_${suffix}@citchennai.net`,
-        password: 'Password123!',
+        password: studentPassword,
         username: `stud3_${suffix}`,
         displayName: 'Student Three',
         college: 'Chennai Institute of Technology',
@@ -77,50 +83,21 @@ describe('VYNK Master Directive — Verification of Mutual Connections, Admin RB
     student3 = r3.json().data.user;
     token3 = r3.json().data.accessToken;
 
-    // 4. Admin login
+    // 4. Admin login using canonical owner
+    const adminEmail = process.env.OWNER_EMAIL || 'asmitha7intech@gmail.com';
+    const adminPassword = process.env.OWNER_INITIAL_PASSWORD;
     const adminLoginRes = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/login',
       payload: {
-        email: 'admin@citchennai.net',
-        password: 'AdminPassword123!',
+        email: adminEmail,
+        password: adminPassword,
       },
     });
 
-    if (adminLoginRes.statusCode === 200) {
-      adminUser = adminLoginRes.json().data.user;
-      adminToken = adminLoginRes.json().data.accessToken;
-    } else {
-      // Create admin user for testing
-      const regAdmin = await app.inject({
-        method: 'POST',
-        url: '/api/v1/auth/register',
-        payload: {
-          email: `admin_tester_${suffix}@citchennai.net`,
-          password: 'AdminPassword123!',
-          username: `admin_${suffix}`,
-          displayName: 'Test Admin',
-          college: 'Chennai Institute of Technology',
-          department: 'Computer Science',
-          graduationYear: 2026,
-        },
-      });
-      adminUser = regAdmin.json().data.user;
-      await (prisma as any).user.update({
-        where: { id: adminUser.id },
-        data: { role: 'ADMIN' },
-      });
-      const loginAgain = await app.inject({
-        method: 'POST',
-        url: '/api/v1/auth/login',
-        payload: {
-          email: `admin_tester_${suffix}@citchennai.net`,
-          password: 'AdminPassword123!',
-        },
-      });
-      adminToken = loginAgain.json().data.accessToken;
-      adminUser = loginAgain.json().data.user;
-    }
+    expect(adminLoginRes.statusCode).toBe(200);
+    adminUser = adminLoginRes.json().data.user;
+    adminToken = adminLoginRes.json().data.accessToken;
   });
 
   afterAll(async () => {
@@ -128,7 +105,7 @@ describe('VYNK Master Directive — Verification of Mutual Connections, Admin RB
   });
 
   describe('Phase 3: Secure Administrator Provisioning & RBAC Access Control', () => {
-    it('verifies primary admin accounts exist in database with role ADMIN', async () => {
+    it('verifies single canonical SuperAdmin exists and extra admins are eliminated', async () => {
       const ashUser = await (prisma as any).user.findFirst({
         where: {
           OR: [
@@ -138,20 +115,13 @@ describe('VYNK Master Directive — Verification of Mutual Connections, Admin RB
           ],
         },
       });
-      expect(ashUser).toBeDefined();
-      expect(ashUser.role).toBe('ADMIN');
+      expect(ashUser).toBeNull();
 
       const asmithaUser = await (prisma as any).user.findFirst({
-        where: {
-          OR: [
-            { email: 'asmitha7intech@gmail.com' },
-            { username: 'asmitha' },
-            { email: 'asmitha_1789140990765@mit.edu' },
-          ],
-        },
+        where: { email: 'asmitha7intech@gmail.com' },
       });
       expect(asmithaUser).toBeDefined();
-      expect(['ADMIN', 'SUPER_ADMIN']).toContain(asmithaUser.role);
+      expect(asmithaUser.role).toBe('SUPER_ADMIN');
     });
 
     it('denies unauthenticated requests to /api/v1/pulse/summary with 401', async () => {

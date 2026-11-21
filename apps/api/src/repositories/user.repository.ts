@@ -119,9 +119,11 @@ export const userRepository = {
   },
 
   updateProfile: async (userId: string, data: any) => {
+    // Strip privileged/immutable fields from direct profile updates
+    const { xp, level, role, mustChangePassword, passwordHash, ...safeData } = data;
     return prisma.user.update({
       where: { id: userId },
-      data,
+      data: safeData,
     });
   },
 

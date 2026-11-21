@@ -1,72 +1,96 @@
+/**
+ * Canonical SuperAdmin Provisioning Script
+ * 
+ * Rules:
+ * 1. Exactly ONE privileged account: the SUPER_ADMIN created from .env
+ *    (OWNER_EMAIL, OWNER_USERNAME, OWNER_DISPLAY_NAME, OWNER_INITIAL_PASSWORD)
+ * 2. Argon2id-hashed, mustChangePassword=true, XP=0, level=1, zero badges.
+ * 3. Deletes all extra admin accounts (admin@citchennai.net, ash@citchennai.net, etc.).
+ * 4. NEVER prints the password to console or logs.
+ */
+
 const fs = require('fs');
 const path = require('path');
-let bcrypt;
-try {
-  bcrypt = require('bcryptjs');
-} catch {
-  try {
-    bcrypt = require('../apps/api/node_modules/bcryptjs');
-  } catch {
-    bcrypt = null;
+const crypto = require('crypto');
+const dotenv = require('dotenv');
+
+// Load environment variables from workspace root .env
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+const { hash, Algorithm } = require('@node-rs/argon2');
+
+async function provisionOwner() {
+  const rootDir = path.resolve(__dirname, '..');
+  const envPath = path.resolve(rootDir, '.env');
+
+  const ownerEmail = (process.env.OWNER_EMAIL || 'asmitha7intech@gmail.com').toLowerCase().trim();
+  const ownerUsername = (process.env.OWNER_USERNAME || 'asmitha').toLowerCase().trim();
+  const ownerDisplayName = process.env.OWNER_DISPLAY_NAME || 'Asmitha S';
+  let initialPassword = process.env.OWNER_INITIAL_PASSWORD;
+
+  if (!initialPassword) {
+    initialPassword = `Vynk#${crypto.randomBytes(8).toString('hex')}!Aa9`;
+    fs.appendFileSync(envPath, `\nOWNER_INITIAL_PASSWORD=${initialPassword}\n`);
+    console.log('[PROVISION] Generated fresh initial owner password and saved to .env (not displayed for security).');
   }
-}
 
-const dbPath = path.resolve(__dirname, '../data/vynk_db.json');
-if (!fs.existsSync(dbPath)) {
-  console.error('Database file not found:', dbPath);
-  process.exit(1);
-}
+  // Hash using Argon2id with memory-hard parameters
+  const passwordHash = await hash(initialPassword, {
+    algorithm: Algorithm.Argon2id,
+    memoryCost: 65536,
+    timeCost: 3,
+    outputLen: 32,
+  });
 
-const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+  const devDir = path.resolve(rootDir, 'data/pglite_dev');
+  if (!fs.existsSync(devDir)) {
+    fs.mkdirSync(devDir, { recursive: true });
+  }
 
-let canonical = db.users.find(u => u.email?.toLowerCase() === 'asmitha7intech@gmail.com');
-const existingAdmin = db.users.find(u => u.email?.toLowerCase() === 'ash@citchennai.net') 
-  || db.users.find(u => u.email?.toLowerCase() === 'admin@citchennai.net')
-  || db.users.find(u => u.username?.toLowerCase() === 'ash');
+  const storeFile = path.join(devDir, 'store.json');
+  let state = {};
+  if (fs.existsSync(storeFile)) {
+    try {
+      state = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
+    } catch {
+      state = {};
+    }
+  }
 
-// Verified Argon2id hash for 'Password123!'
-const ARGON2ID_PASSWORD_HASH = '$argon2id$v=19$m=65536,t=3,p=1$XURq5KWsiT63uUdgTUyU2g$JRm4SgWSEYsO0q5G9p7axOZx7hwptKAXPVc6F8vWAwA';
-
-const passwordHash = ARGON2ID_PASSWORD_HASH;
-
-if (!canonical) {
-  canonical = {
+  const ownerRecord = {
     id: 'owner-asmitha-canonical',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    email: 'asmitha7intech@gmail.com',
-    username: 'asmitha',
-    displayName: 'Asmitha S',
+    email: ownerEmail,
+    username: ownerUsername,
+    displayName: ownerDisplayName,
     passwordHash: passwordHash,
     college: 'Chennai Institute of Technology',
     department: 'Computer Science',
     graduationYear: 2026,
     role: 'SUPER_ADMIN',
-    xp: 5000,
-    level: 25,
-    reputationScore: 1000,
-    streakDays: 60,
+    mustChangePassword: true,
+    xp: 0,
+    level: 1,
+    reputationScore: 100,
+    streakDays: 0,
     headline: 'Founder & Lead Architect @ VYNK',
     bio: 'Campus collaboration, technical leadership, and engineering excellence.',
     isAvailableForCrews: true,
     isAvailableForMentorship: true,
   };
-  db.users.unshift(canonical);
-  console.log('[PROVISION] Created canonical owner account:', canonical.email, 'with role:', canonical.role);
-} else {
-  canonical.role = 'SUPER_ADMIN';
-  canonical.passwordHash = passwordHash;
-  canonical.updatedAt = new Date().toISOString();
-  console.log('[PROVISION] Updated canonical owner account role to:', canonical.role);
+
+  // Exactly ONE account in users: the canonical SuperAdmin
+  state.users = [ownerRecord];
+
+  fs.writeFileSync(storeFile, JSON.stringify(state, null, 2), 'utf8');
+  console.log('[PROVISION] Successfully provisioned canonical SUPER_ADMIN:', ownerEmail);
+  console.log('[PROVISION] mustChangePassword flag set: true');
+  console.log('[PROVISION] Initial XP: 0, Level: 1, Badges: 0');
+  console.log('[PROVISION] Total users in dev database: Exactly 1');
 }
 
-// Also ensure preserved admin accounts have valid credentials for tests & admin login
-db.users.forEach(u => {
-  if (['admin@citchennai.net', 'ash@citchennai.net'].includes(u.email?.toLowerCase())) {
-    u.passwordHash = passwordHash;
-    u.updatedAt = new Date().toISOString();
-  }
+provisionOwner().catch(err => {
+  console.error('[PROVISION ERROR]:', err);
+  process.exit(1);
 });
-
-fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), 'utf8');
-console.log('[PROVISION] Successfully updated database. Total users:', db.users.length);

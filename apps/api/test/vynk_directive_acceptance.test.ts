@@ -1,10 +1,13 @@
+import path from 'path';
+import fs from 'fs';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@vynk/database';
 import { buildServer } from '../src/server';
 import { FastifyInstance } from 'fastify';
-import path from 'path';
-import fs from 'fs';
 import { getUploadsDir } from '../src/utils/paths';
+import { generateTestPassword } from './test-helpers';
 
 describe('VYNK Master Directive — Complete Engineering & Acceptance Verification Suite', () => {
   let app: FastifyInstance;
@@ -22,6 +25,8 @@ describe('VYNK Master Directive — Complete Engineering & Acceptance Verificati
 
   const testUserIds: string[] = [];
 
+  const sharedTestPassword = generateTestPassword();
+
   beforeAll(async () => {
     app = await buildServer();
     await app.ready();
@@ -32,7 +37,7 @@ describe('VYNK Master Directive — Complete Engineering & Acceptance Verificati
       url: '/api/v1/auth/register',
       payload: {
         email: `directive_user_a_${uniqueKey}@citchennai.net`,
-        password: 'Password123!',
+        password: sharedTestPassword,
         username: `user_a_${uniqueKey}`,
         displayName: 'Verified Student One',
         college: 'Chennai Institute of Technology',
@@ -55,7 +60,7 @@ describe('VYNK Master Directive — Complete Engineering & Acceptance Verificati
       url: '/api/v1/auth/register',
       payload: {
         email: `directive_user_b_${uniqueKey}@citchennai.net`,
-        password: 'Password123!',
+        password: sharedTestPassword,
         username: `user_b_${uniqueKey}`,
         displayName: 'Verified Student Two',
         college: 'Chennai Institute of Technology',
@@ -77,7 +82,7 @@ describe('VYNK Master Directive — Complete Engineering & Acceptance Verificati
       url: '/api/v1/auth/register',
       payload: {
         email: `directive_user_c_${uniqueKey}@citchennai.net`,
-        password: 'Password123!',
+        password: sharedTestPassword,
         username: `user_c_${uniqueKey}`,
         displayName: 'Verified Student Three',
         college: 'CIT',
@@ -129,7 +134,7 @@ describe('VYNK Master Directive — Complete Engineering & Acceptance Verificati
         url: '/api/v1/auth/login',
         payload: {
           email: userA.email,
-          password: 'Password123!',
+          password: sharedTestPassword,
         },
       });
 
@@ -576,7 +581,7 @@ describe('VYNK Master Directive — Complete Engineering & Acceptance Verificati
         url: '/api/v1/auth/login',
         payload: {
           email: userA.email,
-          password: 'Password123!',
+          password: sharedTestPassword,
         },
       });
       const activeTokenA = loginRes.json().data.accessToken;
@@ -633,13 +638,13 @@ describe('VYNK Master Directive — Complete Engineering & Acceptance Verificati
       expect(synthetic).toHaveLength(0);
     });
 
-    it('preserves authentic registered administrator accounts in the database', async () => {
+    it('verifies single canonical SuperAdmin exists and secondary admins are removed', async () => {
       const users = await prisma.user.findMany();
-      expect(users.length).toBeGreaterThanOrEqual(3);
+      expect(users.length).toBeGreaterThanOrEqual(1);
 
       const authenticUsernames = users.map((u) => u.username.toLowerCase());
       expect(authenticUsernames).toContain('asmitha');
-      expect(authenticUsernames).toContain('ash');
+      expect(authenticUsernames).not.toContain('ash');
     });
   });
 
@@ -655,38 +660,19 @@ describe('VYNK Master Directive — Complete Engineering & Acceptance Verificati
       const studentLogin = await app.inject({
         method: 'POST',
         url: '/api/v1/auth/login',
-        payload: { email: userA.email, password: 'Password123!' },
+        payload: { email: userA.email, password: sharedTestPassword },
       });
       activeStudentToken = studentLogin.json().data.accessToken;
 
-      // Ensure admin exists and login to get admin token
-      let admin = await prisma.user.findUnique({ where: { email: 'admin@citchennai.net' } });
-      if (!admin) {
-        admin = await prisma.user.create({
-          data: {
-            email: 'admin@citchennai.net',
-            username: 'vynk_admin',
-            displayName: 'VYNK Operations Admin',
-            passwordHash: '$2b$10$BCm/AzQqjyCS6hgCTaJ6duKpJdHCIrkfDF8k.NzPQd/FEMefBYwiu',
-            college: 'Chennai Institute of Technology',
-            department: 'Computer Science',
-            graduationYear: 2026,
-            role: 'ADMIN',
-          },
-        });
-      } else if (admin.role !== 'ADMIN') {
-        await prisma.user.update({
-          where: { id: admin.id },
-          data: { role: 'ADMIN' },
-        });
-      }
+      const adminEmail = process.env.OWNER_EMAIL || 'asmitha7intech@gmail.com';
+      const adminPassword = process.env.OWNER_INITIAL_PASSWORD;
 
       const loginRes = await app.inject({
         method: 'POST',
         url: '/api/v1/auth/login',
         payload: {
-          email: 'admin@citchennai.net',
-          password: 'Password123!',
+          email: adminEmail,
+          password: adminPassword,
         },
       });
 
