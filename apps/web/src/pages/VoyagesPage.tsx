@@ -143,9 +143,13 @@ export function VoyagesPage() {
       ) : voyages.length === 0 ? (
         <EmptyState
           icon={Layers}
-          title="No voyages showcased in this category yet"
-          description="Have you built an MVP, hackathon project, or research paper? Showcase your living Voyage on VYNK and earn +250 XP."
-          actionLabel="Showcase Voyage"
+          title={category === 'ALL' ? "No voyages yet" : "No voyages showcased in this category yet"}
+          description={
+            category === 'ALL'
+              ? "Start building something and showcase it to your campus."
+              : "Have you built an MVP, hackathon project, or research paper? Showcase your living Voyage on VYNK and earn +250 XP."
+          }
+          actionLabel="Start a Voyage"
           onAction={() => setIsCreateOpen(true)}
         />
       ) : (

@@ -17,12 +17,23 @@ export function VoyageCard({ voyage }: { voyage: Voyage }) {
   };
 
   const technologies: string[] = Array.isArray(voyage?.technologies) 
-    ? voyage.technologies 
+    ? voyage.technologies.map((t: any) => (typeof t === 'string' ? t : t?.name || t?.title || 'Tech'))
     : Array.isArray((voyage as any)?.tags) 
-      ? (voyage as any).tags 
+      ? (voyage as any).tags.map((t: any) => (typeof t === 'string' ? t : t?.name || t?.title || 'Tech'))
       : [];
 
-  const milestones = Array.isArray(voyage?.milestones) ? voyage.milestones : [];
+  const milestones = Array.isArray(voyage?.milestones)
+    ? voyage.milestones.map((m: any, idx: number) => {
+        if (typeof m === 'string') {
+          return { id: `m_${idx}`, title: m, isCompleted: false };
+        }
+        return {
+          id: m?.id || `m_${idx}`,
+          title: typeof m?.title === 'string' ? m.title : typeof m?.name === 'string' ? m.name : 'Milestone',
+          isCompleted: !!m?.isCompleted,
+        };
+      })
+    : [];
   const statusText = (voyage?.status || 'IN_PROGRESS').replace(/_/g, ' ');
   const categoryText = voyage?.category || 'Student Project';
   const creatorName = voyage?.creator?.displayName || 'VYNK Builder';
