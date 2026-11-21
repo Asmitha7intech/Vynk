@@ -76,8 +76,18 @@ export async function voyagesController(fastify: FastifyInstance) {
   });
 
   fastify.delete('/:id/tasks/:taskId', { preHandler: [(fastify as any).authenticate] }, async (request: FastifyRequest<{ Params: { id: string; taskId: string } }>, reply: FastifyReply) => {
-    await voyageService.deleteTask(request.params.id, request.params.taskId);
-    return reply.send({ success: true, message: 'Task deleted successfully' });
+    try {
+      await voyageService.deleteTask(
+        request.params.id,
+        request.params.taskId,
+        request.userPayload!.userId,
+        request.userPayload!.role
+      );
+      return reply.send({ success: true, message: 'Task deleted successfully' });
+    } catch (err: any) {
+      const status = err.statusCode || 400;
+      return reply.status(status).send({ success: false, message: err.message });
+    }
   });
 
   // Discussions

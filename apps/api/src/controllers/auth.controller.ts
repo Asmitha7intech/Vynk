@@ -1,4 +1,6 @@
 import { userRepository } from '../repositories/user.repository';
+import { prisma } from '@vynk/database';
+import { mailService } from '../services/mail.service';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import {
   registerSchema,
@@ -11,7 +13,20 @@ import { authService } from '../services/auth.service';
 import { config } from '../config';
 
 export async function authController(fastify: FastifyInstance) {
-  fastify.post('/register', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.post(
+    '/register',
+    {
+      config: {
+        rateLimit:
+          process.env.NODE_ENV === 'test'
+            ? false
+            : {
+                max: 3,
+                timeWindow: 60 * 60 * 1000, // 3 attempts per hour
+              },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = registerSchema.parse(request.body);
     const user = await authService.register(parsed);
 
@@ -32,6 +47,14 @@ export async function authController(fastify: FastifyInstance) {
     const accessToken = fastify.jwt.sign(tokenPayload, { expiresIn: config.jwtAccessExpiresIn });
     const refreshToken = fastify.jwt.sign(tokenPayload, { expiresIn: config.jwtRefreshExpiresIn });
 
+    reply.setCookie('refreshToken', refreshToken, {
+      path: '/',
+      httpOnly: true,
+      secure: config.nodeEnv === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60,
+    });
+
     return reply.status(201).send({
       success: true,
       data: {
@@ -44,7 +67,20 @@ export async function authController(fastify: FastifyInstance) {
     });
   });
 
-  fastify.post('/login', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.post(
+    '/login',
+    {
+      config: {
+        rateLimit:
+          process.env.NODE_ENV === 'test'
+            ? false
+            : {
+                max: 5,
+                timeWindow: 15 * 60 * 1000, // 5 attempts per 15 minutes
+              },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = loginSchema.parse(request.body);
     const user = await authService.login(parsed.email, parsed.password);
 
@@ -64,6 +100,14 @@ export async function authController(fastify: FastifyInstance) {
 
     const accessToken = fastify.jwt.sign(tokenPayload, { expiresIn: config.jwtAccessExpiresIn });
     const refreshToken = fastify.jwt.sign(tokenPayload, { expiresIn: config.jwtRefreshExpiresIn });
+
+    reply.setCookie('refreshToken', refreshToken, {
+      path: '/',
+      httpOnly: true,
+      secure: config.nodeEnv === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60,
+    });
 
     return reply.send({
       success: true,
@@ -86,6 +130,8 @@ export async function authController(fastify: FastifyInstance) {
 
       await authService.logout(sessionId, userId);
 
+      reply.clearCookie('refreshToken', { path: '/' });
+
       return reply.send({
         success: true,
         message: 'Successfully logged out and session revoked.',
@@ -106,9 +152,43 @@ export async function authController(fastify: FastifyInstance) {
   });
 
   fastify.post('/refresh', async (request: FastifyRequest, reply: FastifyReply) => {
-    const parsed = refreshTokenSchema.parse(request.body);
+    const incomingToken = (request.cookies as any)?.refreshToken || (request.body as any)?.refreshToken;
+    if (!incomingToken) {
+      return reply.status(401).send({
+        success: false,
+        message: 'Authentication required. Missing refresh token in cookie or body.',
+      });
+    }
+
     try {
-      const decoded: any = fastify.jwt.verify(parsed.refreshToken);
+      const decoded: any = fastify.jwt.verify(incomingToken);
+      const session = await (prisma as any).session.findUnique({
+        where: { id: decoded.sessionId },
+      });
+
+      // Token reuse detection: if presented session was already revoked, revoke whole family!
+      if (!session || session.isRevoked || session.revokedAt) {
+        if (session?.familyId) {
+          await authService.revokeSessionFamily(session.familyId);
+        }
+        reply.clearCookie('refreshToken', { path: '/' });
+        return reply.status(401).send({
+          success: false,
+          code: 'TOKEN_REUSE_DETECTED',
+          message: 'Security alert: Refresh token reuse detected. All sessions in this family revoked.',
+        });
+      }
+
+      // Rotate session: revoke old session and issue new rotated session in same family
+      await authService.revokeSession(decoded.userId, session.id);
+
+      const rotatedSession = await authService.createSession(
+        decoded.userId,
+        request.headers['user-agent'],
+        request.ip,
+        session.familyId
+      );
+
       const dbUser = await userRepository.findById(decoded.userId);
       const role = dbUser?.role || decoded.role;
       const tokenPayload = {
@@ -116,11 +196,19 @@ export async function authController(fastify: FastifyInstance) {
         email: dbUser?.email || decoded.email,
         username: dbUser?.username || decoded.username,
         role,
-        sessionId: decoded.sessionId,
+        sessionId: rotatedSession.id,
       };
 
       const accessToken = fastify.jwt.sign(tokenPayload, { expiresIn: config.jwtAccessExpiresIn });
       const newRefreshToken = fastify.jwt.sign(tokenPayload, { expiresIn: config.jwtRefreshExpiresIn });
+
+      reply.setCookie('refreshToken', newRefreshToken, {
+        path: '/',
+        httpOnly: true,
+        secure: config.nodeEnv === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60,
+      });
 
       return reply.send({
         success: true,
@@ -128,12 +216,15 @@ export async function authController(fastify: FastifyInstance) {
           accessToken,
           refreshToken: newRefreshToken,
           expiresIn: config.jwtAccessExpiresIn,
+          sessionId: rotatedSession.id,
         },
       });
-    } catch (err) {
+    } catch (err: any) {
+      console.error('Refresh error:', err?.message || err);
+      reply.clearCookie('refreshToken', { path: '/' });
       return reply.status(401).send({
         success: false,
-        message: 'Invalid or expired refresh token',
+        message: 'Invalid or expired refresh token.',
       });
     }
   });
@@ -149,10 +240,66 @@ export async function authController(fastify: FastifyInstance) {
 
   fastify.get('/sessions', { preHandler: [(fastify as any).authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.userPayload!.userId;
-    const sessions = await authService.getUserSessions(userId);
+    const sessions = await authService.listSessions(userId);
     return reply.send({
       success: true,
       data: { sessions },
+    });
+  });
+
+  fastify.delete('/sessions/:id', { preHandler: [(fastify as any).authenticate] }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    const userId = request.userPayload!.userId;
+    await authService.revokeSession(userId, request.params.id);
+    return reply.send({
+      success: true,
+      message: 'Session revoked successfully.',
+    });
+  });
+
+  fastify.post('/sessions/revoke-all', { preHandler: [(fastify as any).authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = request.userPayload!.userId;
+    const currentSessionId = request.userPayload!.sessionId;
+    await authService.revokeAllSessions(userId, currentSessionId);
+    return reply.send({
+      success: true,
+      message: 'All other sessions have been revoked.',
+    });
+  });
+
+  fastify.post('/verify-email', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { token } = (request.body as any) || {};
+    if (!token) {
+      return reply.status(400).send({
+        success: false,
+        message: 'Verification token is required.',
+      });
+    }
+    const success = await mailService.verifyEmail(token);
+    if (!success) {
+      return reply.status(400).send({
+        success: false,
+        message: 'Invalid or expired email verification token.',
+      });
+    }
+    return reply.send({
+      success: true,
+      message: 'Email successfully verified. Welcome to VYNK!',
+    });
+  });
+
+  fastify.post('/resend-verification', { preHandler: [(fastify as any).authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = request.userPayload!.userId;
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      return reply.status(404).send({ success: false, message: 'User not found.' });
+    }
+    if (user.emailVerified) {
+      return reply.send({ success: true, message: 'Email is already verified.' });
+    }
+    await mailService.sendVerificationEmail(user.id, user.email);
+    return reply.send({
+      success: true,
+      message: 'Verification email resent successfully.',
     });
   });
 }

@@ -3,6 +3,7 @@ import { vynkRepository } from '../repositories/vynk.repository';
 import { prisma } from '@vynk/database';
 import { eventService } from './event.service';
 import { broadcastToConversation, sendToUser } from '../realtime/socket';
+import { blockService } from './block.service';
 
 export const messageService = {
   getUserConversations: async (userId: string) => {
@@ -70,6 +71,12 @@ export const messageService = {
       throw new Error('Recipient student profile not found.');
     }
 
+    // Verify blocking status
+    const isBlocked = await blockService.isBlocked(userAId, userBId);
+    if (isBlocked) {
+      throw new Error('Cannot communicate with a blocked user.');
+    }
+
     // Check for existing direct conversation
     let conv = await messageRepository.findDirectConversation(userAId, userBId);
     if (!conv) {
@@ -126,6 +133,19 @@ export const messageService = {
 
     if (!membership) {
       throw new Error('You do not have permission to send messages in this conversation.');
+    }
+
+    // Check if any member has blocked the sender or vice-versa
+    const members = await prisma.conversationMember.findMany({
+      where: { conversationId },
+    });
+    for (const m of members) {
+      if (m.userId !== senderId) {
+        const isBlocked = await blockService.isBlocked(senderId, m.userId);
+        if (isBlocked) {
+          throw new Error('Cannot send messages to a blocked user.');
+        }
+      }
     }
 
     // Persist message first in transactional database

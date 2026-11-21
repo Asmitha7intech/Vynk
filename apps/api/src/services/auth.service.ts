@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { passwordService } from './password.service';
 import { userRepository } from '../repositories/user.repository';
 import { prisma } from '@vynk/database';
 import { Role } from '@vynk/types';
@@ -25,7 +26,7 @@ export const authService = {
       throw new Error('Username is already taken.');
     }
 
-    const passwordHash = await bcrypt.hash(input.password, 10);
+    const passwordHash = await passwordService.hashPassword(input.password);
 
     const user = await prisma.user.create({
       data: {
@@ -73,9 +74,23 @@ export const authService = {
       throw new Error('Invalid email or password.');
     }
 
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) {
+    const { isValid, needsRehash } = await passwordService.verifyPassword(user.passwordHash, password);
+    if (!isValid) {
       throw new Error('Invalid email or password.');
+    }
+
+    // Transparent automatic rehash from legacy bcrypt to Argon2id
+    if (needsRehash) {
+      try {
+        const upgradedHash = await passwordService.hashPassword(password);
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { passwordHash: upgradedHash },
+        });
+        user.passwordHash = upgradedHash;
+      } catch (err) {
+        // Log silently and allow login to proceed
+      }
     }
 
     await eventService.publish({
@@ -93,8 +108,9 @@ export const authService = {
     return user;
   },
 
-  createSession: async (userId: string, userAgent?: string, ipAddress?: string) => {
+  createSession: async (userId: string, userAgent?: string, ipAddress?: string, familyId?: string, refreshTokenHash?: string) => {
     const sessionId = (crypto as any).randomUUID ? (crypto as any).randomUUID() : `sess_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const actualFamilyId = familyId || `fam_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
     const session = await (prisma as any).session.create({
@@ -103,6 +119,9 @@ export const authService = {
         userId,
         userAgent: userAgent || 'Unknown Device',
         ipAddress: ipAddress || '127.0.0.1',
+        familyId: actualFamilyId,
+        refreshTokenHash: refreshTokenHash || null,
+        isRevoked: false,
         expiresAt,
         createdAt: new Date().toISOString(),
         revokedAt: null,
@@ -110,6 +129,48 @@ export const authService = {
     });
 
     return session;
+  },
+
+  listSessions: async (userId: string) => {
+    return (prisma as any).session.findMany({
+      where: {
+        userId,
+        isRevoked: false,
+        revokedAt: null,
+      },
+      select: {
+        id: true,
+        userAgent: true,
+        ipAddress: true,
+        createdAt: true,
+        expiresAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  },
+
+  revokeSession: async (userId: string, sessionId: string) => {
+    return (prisma as any).session.updateMany({
+      where: { id: sessionId, userId },
+      data: { isRevoked: true, revokedAt: new Date().toISOString() },
+    });
+  },
+
+  revokeAllSessions: async (userId: string, currentSessionId?: string) => {
+    return (prisma as any).session.updateMany({
+      where: {
+        userId,
+        ...(currentSessionId ? { NOT: { id: currentSessionId } } : {}),
+      },
+      data: { isRevoked: true, revokedAt: new Date().toISOString() },
+    });
+  },
+
+  revokeSessionFamily: async (familyId: string) => {
+    return (prisma as any).session.updateMany({
+      where: { familyId },
+      data: { isRevoked: true, revokedAt: new Date().toISOString() },
+    });
   },
 
   logout: async (sessionId?: string, userId?: string) => {

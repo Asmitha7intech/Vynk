@@ -321,7 +321,20 @@ export const voyageService = {
     return updated;
   },
 
-  deleteTask: async (projectId: string, taskId: string) => {
+  deleteTask: async (projectId: string, taskId: string, userId?: string, userRole?: string) => {
+    const task = await (prisma as any).projectTask.findUnique({ where: { id: taskId } });
+    if (!task || task.projectId !== projectId) throw new Error('Task not found');
+    if (userId) {
+      const project = await prisma.project.findUnique({ where: { id: projectId } });
+      const isOwner = project && ((project as any).authorId === userId || (project as any).ownerId === userId);
+      const isAssignee = task.assigneeId === userId;
+      const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
+      if (!isOwner && !isAssignee && !isAdmin) {
+        const err: any = new Error('Forbidden: You do not have permission to delete this task.');
+        err.statusCode = 403;
+        throw err;
+      }
+    }
     return (prisma as any).projectTask.delete({ where: { id: taskId } });
   },
 

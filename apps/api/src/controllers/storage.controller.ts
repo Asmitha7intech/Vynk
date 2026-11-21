@@ -13,6 +13,39 @@ const GetSignedUrlSchema = z.object({
   folder: z.enum(['avatars', 'voyages', 'posts', 'evidence']).optional(),
 });
 
+export function validateMagicBytes(buffer: Buffer): { valid: boolean; ext: string; mime: string } {
+  if (buffer.length < 4) {
+    return { valid: false, ext: '', mime: '' };
+  }
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return { valid: true, ext: '.jpg', mime: 'image/jpeg' };
+  }
+  // PNG: 89 50 4E 47
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+    return { valid: true, ext: '.png', mime: 'image/png' };
+  }
+  // GIF: 47 49 46 38
+  if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38) {
+    return { valid: true, ext: '.gif', mime: 'image/gif' };
+  }
+  // WebP: RIFF (52 49 46 46) and bytes 8-11 'WEBP'
+  if (
+    buffer.length >= 12 &&
+    buffer[0] === 0x52 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x46 &&
+    buffer[8] === 0x57 &&
+    buffer[9] === 0x45 &&
+    buffer[10] === 0x42 &&
+    buffer[11] === 0x50
+  ) {
+    return { valid: true, ext: '.webp', mime: 'image/webp' };
+  }
+  return { valid: false, ext: '', mime: '' };
+}
+
 export async function storageController(fastify: FastifyInstance) {
   fastify.post('/signed-url', { preHandler: [(fastify as any).authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const parse = GetSignedUrlSchema.safeParse(request.body);
@@ -62,15 +95,31 @@ export async function storageController(fastify: FastifyInstance) {
       return reply.status(400).send({ success: false, message: 'No file content provided' });
     }
 
+    if (buffer.length > 5 * 1024 * 1024) {
+      return reply.status(400).send({ success: false, message: 'File exceeds 5MB size limit' });
+    }
+
+    const lowerKey = safeKey.toLowerCase();
+    if (lowerKey.endsWith('.jpg') || lowerKey.endsWith('.jpeg') || lowerKey.endsWith('.png') || lowerKey.endsWith('.webp')) {
+      const check = validateMagicBytes(buffer);
+      if (!check.valid) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Invalid file format: content does not match expected image magic signature',
+        });
+      }
+    }
+
     await fs.promises.writeFile(destinationPath, buffer);
-    const publicUrl = `/uploads/${safeKey}`;
+    const normalizedKey = safeKey.replace(/\\/g, '/');
+    const publicUrl = `/uploads/${normalizedKey}`;
 
     return reply.send({
       success: true,
       message: 'File stored successfully',
       data: {
         publicUrl,
-        fileKey: safeKey,
+        fileKey: normalizedKey,
       },
     });
   };

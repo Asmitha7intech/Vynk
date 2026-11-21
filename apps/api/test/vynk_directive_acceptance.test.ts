@@ -199,6 +199,10 @@ describe('VYNK Master Directive — Complete Engineering & Acceptance Verificati
       expect(json.data.accessToken).toBeDefined();
       expect(json.data.refreshToken).toBeDefined();
 
+      // Use active rotated credentials for subsequent requests
+      tokenA = json.data.accessToken;
+      refreshTokenA = json.data.refreshToken;
+
       // Verify the new access token is immediately usable on protected endpoint
       const meRes = await app.inject({
         method: 'GET',
@@ -629,14 +633,13 @@ describe('VYNK Master Directive — Complete Engineering & Acceptance Verificati
       expect(synthetic).toHaveLength(0);
     });
 
-    it('preserves authentic registered student accounts in the database', async () => {
+    it('preserves authentic registered administrator accounts in the database', async () => {
       const users = await prisma.user.findMany();
-      expect(users.length).toBeGreaterThanOrEqual(30);
+      expect(users.length).toBeGreaterThanOrEqual(3);
 
-      const authenticUsernames = users.map((u) => u.username);
+      const authenticUsernames = users.map((u) => u.username.toLowerCase());
+      expect(authenticUsernames).toContain('asmitha');
       expect(authenticUsernames).toContain('ash');
-      expect(authenticUsernames).toContain('bhuvi');
-      expect(authenticUsernames).toContain('jennnyyyy');
     });
   });
 

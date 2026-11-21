@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { config } from './config';
+import fastifyCookie from '@fastify/cookie';
 import authPlugin from './plugins/auth';
 import { setupErrorHandler } from './plugins/errorHandler';
 
@@ -29,6 +30,8 @@ import { directoryController } from './controllers/directory.controller';
 import { communitiesController } from './controllers/communities.controller';
 import { bigDataLabController } from './controllers/bigdata-lab.controller';
 import { notificationsController } from './controllers/notifications.controller';
+import { blocksController } from './controllers/blocks.controller';
+import { reportsController } from './controllers/reports.controller';
 import multipart from '@fastify/multipart';
 import { getUploadsDir } from './utils/paths';
 import { getOnlineUserIds } from './realtime/socket';
@@ -87,6 +90,11 @@ export async function buildServer() {
       fileSize: 50 * 1024 * 1024, // 50MB limit for rich media, videos, and avatars
       files: 1,
     },
+  });
+
+  await fastify.register(fastifyCookie, {
+    secret: config.cookieSecret,
+    parseOptions: {},
   });
 
   await fastify.register(authPlugin);
@@ -162,6 +170,8 @@ export async function buildServer() {
     fastify.register(directoryController, { prefix: `${prefix}/directory` });
     fastify.register(bigDataLabController, { prefix: `${prefix}/bigdata-lab` });
     fastify.register(notificationsController, { prefix: `${prefix}/notifications` });
+    fastify.register(blocksController, { prefix: `${prefix}/blocks` });
+    fastify.register(reportsController, { prefix: `${prefix}/reports` });
   };
 
   // Register both /api/v1 (primary) and /api (alias)

@@ -41,3 +41,42 @@ This log tracks every step executed across Phases B through G in accordance with
   - Zero synthetic data across database, uploads, and frontend code.
 - **Open Blockers:** None
 
+### Phase C — Auth, Security & Safety
+- **Timestamp:** 2026-11-21T20:00:00+05:30
+- **Step:** Phase C Complete
+- **Files Changed:**
+  - `apps/api/src/services/password.service.ts` (Argon2id hashing with transparent bcrypt migration)
+  - `apps/api/src/services/auth.service.ts` (session families, multi-device revocation, reuse detection)
+  - `apps/api/src/controllers/auth.controller.ts` (refresh rotation, httpOnly cookies, verify-email, resend-verification)
+  - `apps/api/src/services/mail.service.ts` (SHA-256 single-use tokens, academic domain whitelisting, console/production providers)
+  - `apps/api/src/controllers/posts.controller.ts` (IDOR ownership checks on update/delete, rate limits)
+  - `apps/api/src/repositories/post.repository.ts` (ownership enforcement in updatePost/deletePost)
+  - `apps/api/src/controllers/voyages.controller.ts` (ownership checks on task deletion)
+  - `apps/api/src/services/voyage.service.ts` (captain/assignee verification for task management)
+  - `apps/api/src/services/block.service.ts` (user blocking service)
+  - `apps/api/src/controllers/blocks.controller.ts` (blocking endpoints)
+  - `apps/api/src/services/report.service.ts` (reporting service with audit logging)
+  - `apps/api/src/controllers/reports.controller.ts` (student reporting & admin moderation queue)
+  - `apps/api/src/controllers/storage.controller.ts` (magic bytes validation, 5MB limit, forward-slash normalization)
+  - `apps/api/src/controllers/messages.controller.ts` (rate limits, blocking checks)
+  - `apps/api/src/services/message.service.ts` (blocking verification before message dispatch)
+  - `apps/api/src/server.ts` (registered blocksController and reportsController)
+  - `apps/api/test/argon2_password.test.ts` (Argon2id test suite)
+  - `apps/api/test/session_rotation.test.ts` (session rotation & reuse test)
+  - `apps/api/test/idor_security.test.ts` (IDOR, blocking, reporting, magic bytes security suite)
+  - `docs/legal/PRIVACY_POLICY.md` (DPDP Act & FERPA compliance template)
+  - `docs/legal/TERMS_OF_SERVICE.md` (Student IP & acceptable collaboration covenants)
+  - `docs/legal/COMMUNITY_GUIDELINES.md` (Anti-harassment & code of conduct standards)
+  - `docs/VYNK_SECURITY_AUDIT.md` (comprehensive security report)
+- **Commands Run:**
+  - `pnpm --filter @vynk/api test` (PASS: 17/17 test files, 139/139 tests)
+  - `pnpm --filter @vynk/web test` (PASS: 3/3 test files, 33/33 tests)
+  - `pnpm typecheck` (PASS: 5/5 workspace packages)
+- **Real Results:**
+  - Argon2id password security active with transparent migration.
+  - Refresh token reuse detection revokes entire family if an old token is replayed.
+  - IDOR strictly prevented across posts, comments, and voyage tasks.
+  - User blocking and student reporting operational with audit logs.
+  - Uploads restricted to authentic magic bytes with traversal protection.
+- **Open Blockers:** None
+

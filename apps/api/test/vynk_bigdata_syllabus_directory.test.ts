@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { directoryService } from '../src/services/directory.service';
 import { bigDataRunnerService } from '../src/services/bigdata-runner.service';
 import { prisma } from '@vynk/database';
+import fs from 'fs';
+import path from 'path';
 
 describe('VYNK Master Implementation — Classroom Directory & 6 Big Data Concepts', () => {
   let testUserId: string;
@@ -9,6 +11,30 @@ describe('VYNK Master Implementation — Classroom Directory & 6 Big Data Concep
   beforeAll(async () => {
     const user = await prisma.user.findFirst();
     testUserId = user ? user.id : 'usr_test_student_1';
+
+    // Seed test classroom directory from fixture
+    const rosterPath = path.resolve(__dirname, '../../../_quarantine/seeds/classroom_roster.json');
+    if (fs.existsSync(rosterPath)) {
+      const roster = JSON.parse(fs.readFileSync(rosterPath, 'utf8'));
+      for (const item of roster) {
+        await (prisma as any).classroomDirectory.create({
+          data: {
+            studentId: item.studentId,
+            originalDisplayName: item.originalDisplayName,
+            normalizedName: item.originalDisplayName.trim().toLowerCase(),
+            department: item.department,
+            graduationYear: item.graduationYear || 2026,
+            cohort: item.cohort || '2022-2026',
+            notes: item.notes,
+            isClaimed: false,
+          },
+        });
+      }
+    }
+  });
+
+  afterAll(async () => {
+    await (prisma as any).classroomDirectory?.deleteMany({});
   });
 
   describe('PHASE THREE: Classroom Directory Roster (58 Students)', () => {

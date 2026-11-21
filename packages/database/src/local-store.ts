@@ -78,6 +78,10 @@ export interface DbState {
   projectActivities: any[];
   classroomDirectories: any[];
   bigDataJobs: any[];
+  blocks: any[];
+  auditLogs: any[];
+  emailVerificationTokens: any[];
+  notificationPreferences: any[];
 }
 
 function createEmptyState(): DbState {
@@ -133,6 +137,10 @@ function createEmptyState(): DbState {
     projectActivities: [],
     classroomDirectories: [],
     bigDataJobs: [],
+    blocks: [],
+    auditLogs: [],
+    emailVerificationTokens: [],
+    notificationPreferences: [],
   };
 }
 
@@ -368,6 +376,10 @@ const MODEL_TO_KEY: Record<string, keyof DbState> = {
   projectActivity: 'projectActivities',
   classroomDirectory: 'classroomDirectories',
   bigDataJob: 'bigDataJobs',
+  block: 'blocks',
+  auditLog: 'auditLogs',
+  emailVerificationToken: 'emailVerificationTokens',
+  notificationPreference: 'notificationPreferences',
 };
 
 // Evaluate Prisma filter expression against a record

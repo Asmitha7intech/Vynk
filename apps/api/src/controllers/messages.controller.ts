@@ -36,7 +36,21 @@ export async function messagesController(fastify: FastifyInstance) {
   fastify.post('/direct/:targetUserId', { preHandler: [(fastify as any).authenticate] }, directHandler);
 
   // POST /api/v1/messages/send
-  fastify.post('/send', { preHandler: [(fastify as any).authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.post(
+    '/send',
+    {
+      preHandler: [(fastify as any).authenticate],
+      config: {
+        rateLimit:
+          process.env.NODE_ENV === 'test'
+            ? false
+            : {
+                max: 30,
+                timeWindow: 60 * 1000, // 30 messages per minute
+              },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = sendMessageSchema.parse(request.body);
     const msg = await messageService.sendMessage(
       parsed.conversationId,

@@ -8,9 +8,9 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters').default('vynk_super_secret_jwt_access_key_2026_dev'),
   JWT_REFRESH_SECRET: z.string().min(16).default('vynk_super_secret_jwt_refresh_key_2026_dev'),
-  JWT_ACCESS_EXPIRES_IN: z.string().default('24h'),
-  JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
-  WEB_URL: z.string().default('http://localhost:3000'),
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  WEB_URL: z.string().default('http://localhost:5173'),
   DATABASE_URL: z.string().default('postgresql://vynk_admin:vynk_secret_password@localhost:5432/vynk_db?schema=public'),
   REDIS_URL: z.string().default('redis://localhost:6379'),
   STORAGE_PROVIDER: z.enum(['local', 's3', 'r2']).default('local'),
@@ -18,6 +18,7 @@ const envSchema = z.object({
   STORAGE_ENDPOINT: z.string().optional(),
   STORAGE_ACCESS_KEY: z.string().optional(),
   STORAGE_SECRET_KEY: z.string().optional(),
+  COOKIE_SECRET: z.string().min(16).default('vynk_secure_cookie_encryption_key_2026'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -25,12 +26,24 @@ const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {
   console.error('❌ Environment configuration validation failed:');
   console.error(parsed.error.format());
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
     process.exit(1);
   }
 }
 
 const env = parsed.success ? parsed.data : envSchema.parse({});
+
+// Fail fast in staging or production if fallback development secrets are used
+if (env.NODE_ENV === 'production' || env.NODE_ENV === 'staging') {
+  if (env.JWT_SECRET.includes('_dev') || env.JWT_REFRESH_SECRET.includes('_dev')) {
+    console.error('❌ FATAL: Cannot run in production/staging with default development JWT secrets.');
+    process.exit(1);
+  }
+  if (!process.env.DATABASE_URL) {
+    console.error('❌ FATAL: DATABASE_URL must be explicitly configured in production/staging.');
+    process.exit(1);
+  }
+}
 
 export const config = {
   port: env.PORT,
@@ -42,6 +55,7 @@ export const config = {
   webUrl: env.WEB_URL,
   databaseUrl: env.DATABASE_URL,
   redisUrl: env.REDIS_URL,
+  cookieSecret: env.COOKIE_SECRET,
   storage: {
     provider: env.STORAGE_PROVIDER,
     bucket: env.STORAGE_BUCKET,

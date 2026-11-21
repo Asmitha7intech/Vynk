@@ -11,12 +11,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.5",
     "@fastify/cors": "^10.0.2",
     "@fastify/jwt": "^9.0.4",
     "@fastify/multipart": "^10.1.4",
     "@fastify/rate-limit": "^10.2.2",
     "@fastify/swagger": "^9.4.2",
     "@fastify/swagger-ui": "^5.2.2",
+    "@node-rs/argon2": "^2.2.2",
     "@vynk/database": "workspace:*",
     "@vynk/types": "workspace:*",
     "@vynk/validation": "workspace:*",

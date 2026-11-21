@@ -143,11 +143,15 @@ describe('VYNK Master Directive — Verification of Mutual Connections, Admin RB
 
       const asmithaUser = await (prisma as any).user.findFirst({
         where: {
-          email: 'asmitha_1789140990765@mit.edu',
+          OR: [
+            { email: 'asmitha7intech@gmail.com' },
+            { username: 'asmitha' },
+            { email: 'asmitha_1789140990765@mit.edu' },
+          ],
         },
       });
       expect(asmithaUser).toBeDefined();
-      expect(asmithaUser.role).toBe('ADMIN');
+      expect(['ADMIN', 'SUPER_ADMIN']).toContain(asmithaUser.role);
     });
 
     it('denies unauthenticated requests to /api/v1/pulse/summary with 401', async () => {

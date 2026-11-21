@@ -46,28 +46,77 @@ export async function postsController(fastify: FastifyInstance) {
   });
 
   // POST /api/v1/posts
-  fastify.post('/', { preHandler: [(fastify as any).authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const parsed = createPostSchema.parse(request.body);
-    const userId = request.userPayload?.userId || (request as any).user?.userId;
-    const post = await postRepository.createPost(userId, parsed);
-
-    await eventService.publish({
-      eventType: 'POST_CREATED',
-      userId,
-      college: post.author?.college || undefined,
-      department: post.author?.department || undefined,
-      payload: {
-        postId: post.id,
-        authorId: userId,
-        type: post.type,
-        title: post.title,
-        tags: post.tags,
-        voyageId: post.voyageId,
+  fastify.post(
+    '/',
+    {
+      preHandler: [(fastify as any).authenticate],
+      config: {
+        rateLimit:
+          process.env.NODE_ENV === 'test'
+            ? false
+            : {
+                max: 15,
+                timeWindow: 60 * 1000, // 15 posts per minute
+              },
       },
-    });
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = createPostSchema.parse(request.body);
+      const userId = request.userPayload?.userId || (request as any).user?.userId;
+      const post = await postRepository.createPost(userId, parsed);
 
-    return reply.status(201).send({ success: true, data: post });
-  });
+      await eventService.publish({
+        eventType: 'POST_CREATED',
+        userId,
+        college: post.author?.college || undefined,
+        department: post.author?.department || undefined,
+        payload: {
+          postId: post.id,
+          authorId: userId,
+          type: post.type,
+          title: post.title,
+          tags: post.tags,
+          voyageId: post.voyageId,
+        },
+      });
+
+      return reply.status(201).send({ success: true, data: post });
+    }
+  );
+
+  // PUT /api/v1/posts/:id (IDOR protected: author or admin only)
+  fastify.put(
+    '/:id',
+    { preHandler: [(fastify as any).authenticate] },
+    async (request: FastifyRequest<{ Params: { id: string }; Body: any }>, reply: FastifyReply) => {
+      const userId = request.userPayload!.userId;
+      const userRole = request.userPayload!.role;
+      try {
+        const updated = await postRepository.updatePost(request.params.id, userId, request.body as any, userRole);
+        return reply.send({ success: true, data: updated });
+      } catch (err: any) {
+        const status = err.statusCode || 400;
+        return reply.status(status).send({ success: false, message: err.message });
+      }
+    }
+  );
+
+  // DELETE /api/v1/posts/:id (IDOR protected: author or admin only)
+  fastify.delete(
+    '/:id',
+    { preHandler: [(fastify as any).authenticate] },
+    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+      const userId = request.userPayload!.userId;
+      const userRole = request.userPayload!.role;
+      try {
+        await postRepository.deletePost(request.params.id, userId, userRole);
+        return reply.send({ success: true, message: 'Post successfully deleted' });
+      } catch (err: any) {
+        const status = err.statusCode || 400;
+        return reply.status(status).send({ success: false, message: err.message });
+      }
+    }
+  );
 
   // GET /api/v1/posts/:id/comments
   fastify.get('/:id/comments', async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
@@ -98,11 +147,21 @@ export async function postsController(fastify: FastifyInstance) {
   });
 
   // DELETE /api/v1/posts/:postId/comments/:commentId
-  fastify.delete('/:postId/comments/:commentId', { preHandler: [(fastify as any).authenticate] }, async (request: FastifyRequest<{ Params: { postId: string; commentId: string } }>, reply: FastifyReply) => {
-    const userId = request.userPayload!.userId;
-    const result = await postRepository.deleteComment(request.params.commentId, userId);
-    return reply.send({ success: true, data: result });
-  });
+  fastify.delete(
+    '/:postId/comments/:commentId',
+    { preHandler: [(fastify as any).authenticate] },
+    async (request: FastifyRequest<{ Params: { postId: string; commentId: string } }>, reply: FastifyReply) => {
+      const userId = request.userPayload!.userId;
+      const userRole = request.userPayload!.role;
+      try {
+        const result = await postRepository.deleteComment(request.params.commentId, userId, userRole);
+        return reply.send({ success: true, data: result });
+      } catch (err: any) {
+        const status = err.statusCode || 400;
+        return reply.status(status).send({ success: false, message: err.message });
+      }
+    }
+  );
 
   // POST /api/v1/posts/:id/react
   fastify.post('/:id/react', { preHandler: [(fastify as any).authenticate] }, async (request: FastifyRequest<{ Params: { id: string }; Body?: { emoji?: string } }>, reply: FastifyReply) => {

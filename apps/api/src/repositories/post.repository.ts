@@ -122,10 +122,16 @@ export const postRepository = {
     });
   },
 
-  deleteComment: async (commentId: string, userId: string) => {
+  deleteComment: async (commentId: string, userId: string, userRole?: string) => {
     const comment = await prisma.comment.findUnique({ where: { id: commentId } });
     if (!comment) throw new Error('Comment not found');
-    if (comment.authorId !== userId) throw new Error('Unauthorized to delete this comment');
+    const isOwner = comment.authorId === userId;
+    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
+    if (!isOwner && !isAdmin) {
+      const err: any = new Error('Forbidden: You do not own this comment.');
+      err.statusCode = 403;
+      throw err;
+    }
 
     await prisma.comment.delete({ where: { id: commentId } });
     await prisma.post.update({
@@ -134,6 +140,42 @@ export const postRepository = {
     });
 
     return { success: true };
+  },
+
+  updatePost: async (postId: string, userId: string, data: { content?: string; title?: string; tags?: string[] }, userRole?: string) => {
+    const post = await prisma.post.findUnique({ where: { id: postId } });
+    if (!post) throw new Error('Post not found');
+    const isOwner = post.authorId === userId;
+    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
+    if (!isOwner && !isAdmin) {
+      const err: any = new Error('Forbidden: You do not own this post.');
+      err.statusCode = 403;
+      throw err;
+    }
+    return prisma.post.update({
+      where: { id: postId },
+      data: {
+        ...(data.title !== undefined ? { title: data.title } : {}),
+        ...(data.content !== undefined ? { content: data.content } : {}),
+        ...(data.tags !== undefined ? { tags: data.tags } : {}),
+      },
+      include: { author: true },
+    });
+  },
+
+  deletePost: async (postId: string, userId: string, userRole?: string) => {
+    const post = await prisma.post.findUnique({ where: { id: postId } });
+    if (!post) throw new Error('Post not found');
+    const isOwner = post.authorId === userId;
+    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
+    if (!isOwner && !isAdmin) {
+      const err: any = new Error('Forbidden: You do not own this post.');
+      err.statusCode = 403;
+      throw err;
+    }
+    await prisma.comment.deleteMany({ where: { postId } });
+    await prisma.reaction.deleteMany({ where: { postId } });
+    return prisma.post.delete({ where: { id: postId } });
   },
 
   toggleReaction: async (postId: string, userId: string, emoji = '🔥') => {
