@@ -603,7 +603,7 @@ export function NetworkPage() {
               {allStudents.length === 0 ? (
                 <EmptyState
                   icon={Users}
-                  title="No students found yet. Invite classmates to join VYNK."
+                  title="Invite your classmates and crew members to populate your campus network graph."
                   description="Be the first to build your campus network."
                   actionLabel="Refresh Directory"
                   onAction={fetchNetworkData}
@@ -635,7 +635,7 @@ export function NetworkPage() {
               {allStudents.length === 0 ? (
                 <EmptyState
                   icon={Users}
-                  title="No students found yet. Invite classmates to join VYNK."
+                  title="Invite your classmates and crew members to populate your campus network graph."
                   description="Be the first to build your campus network."
                   actionLabel="Refresh Directory"
                   onAction={fetchNetworkData}

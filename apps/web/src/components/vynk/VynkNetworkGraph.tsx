@@ -427,6 +427,25 @@ export function VynkNetworkGraph() {
 
       {/* Canvas Viewport */}
       <div className="relative rounded-2xl bg-surface/90 border border-white/10 overflow-hidden h-[460px] cursor-grab active:cursor-grabbing">
+        {!isLoading && nodes.filter((n) => n.type === 'STUDENT').length <= 1 && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 text-center space-y-3 bg-card/95 backdrop-blur-sm">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">
+              <Users className="w-6 h-6" />
+            </div>
+            <div className="space-y-1 max-w-sm">
+              <h4 className="text-sm font-bold text-foreground">Campus Network Graph Awaiting Builders</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Invite your classmates and crew members to populate your campus network graph.
+              </p>
+            </div>
+            <Link to="/network">
+              <VynkButton size="xs" variant="primary">
+                Explore Network
+              </VynkButton>
+            </Link>
+          </div>
+        )}
+
         <canvas
           ref={canvasRef}
           onMouseDown={handleMouseDown}
