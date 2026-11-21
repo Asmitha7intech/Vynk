@@ -21,6 +21,8 @@ const VoyageDetailsPage = React.lazy(() => import('./pages/VoyageDetailsPage').t
 const CommunitiesPage = React.lazy(() => import('./pages/CommunitiesPage').then((m) => ({ default: m.CommunitiesPage })));
 const PostDetailsPage = React.lazy(() => import('./pages/PostDetailsPage').then((m) => ({ default: m.PostDetailsPage })));
 const ChangePasswordPage = React.lazy(() => import('./pages/ChangePasswordPage').then((m) => ({ default: m.ChangePasswordPage })));
+const TermsPage = React.lazy(() => import('./pages/TermsPage').then((m) => ({ default: m.TermsPage })));
+const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage').then((m) => ({ default: m.PrivacyPage })));
 const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 
 function PageFallback() {
@@ -98,6 +100,10 @@ export function App() {
               </PublicOnlyRoute>
             }
           />
+
+          {/* Public Legal Documents */}
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
 
           {/* Forced Password Reset for New Provisioned Accounts */}
           <Route path="/change-password" element={<ChangePasswordPage />} />

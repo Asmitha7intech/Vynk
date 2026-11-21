@@ -99,7 +99,7 @@ export function PulsePage() {
   };
 
   useEffect(() => {
-    if (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') {
+    if (user?.role === 'SUPER_ADMIN') {
       fetchSummary();
       fetchPipelineTelemetry();
       fetchEvents(1, eventTypeFilter, searchQuery);
@@ -107,13 +107,13 @@ export function PulsePage() {
   }, [user]);
 
   useEffect(() => {
-    if (activeTab === 'pipeline' && (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN')) {
+    if (activeTab === 'pipeline' && user?.role === 'SUPER_ADMIN') {
       fetchPipelineTelemetry();
     }
   }, [activeTab]);
 
   useEffect(() => {
-    if (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') {
+    if (user?.role === 'SUPER_ADMIN') {
       fetchEvents(currentPage, eventTypeFilter, searchQuery);
     }
   }, [currentPage, eventTypeFilter]);
@@ -126,7 +126,7 @@ export function PulsePage() {
         </div>
         <h2 className="text-xl font-bold text-white">Authentication Required</h2>
         <p className="text-sm text-neutral-400 max-w-md">
-          Please sign in with an authorized administrator account to access VYNK Pulse intelligence telemetry.
+          Please sign in with the platform SuperAdmin account to access VYNK Pulse intelligence telemetry.
         </p>
         <Link to="/auth" className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm font-semibold border border-white/10 transition-colors">
           Sign In
@@ -135,7 +135,7 @@ export function PulsePage() {
     );
   }
 
-  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+  if (user.role !== 'SUPER_ADMIN') {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
         <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
@@ -144,9 +144,9 @@ export function PulsePage() {
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
           403 Access Denied
         </div>
-        <h2 className="text-2xl font-bold text-white tracking-tight">Administrator Authorization Required</h2>
+        <h2 className="text-2xl font-bold text-white tracking-tight">SuperAdmin Authorization Required</h2>
         <p className="text-sm text-neutral-400 max-w-md leading-relaxed">
-          VYNK Pulse is restricted strictly to platform operations administrators. Your account (<span className="text-white font-mono">{user.email}</span>, role: <span className="text-cyan-400 font-mono">{user.role}</span>) does not have administrative privileges.
+          VYNK Pulse is restricted strictly to the platform SuperAdmin. Your account (<span className="text-white font-mono">{user.email}</span>, role: <span className="text-cyan-400 font-mono">{user.role}</span>) does not have SuperAdmin privileges.
         </p>
         <Link to="/" className="px-5 py-2.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-sm font-semibold border border-cyan-500/40 transition-colors">
           Return to Campus Feed

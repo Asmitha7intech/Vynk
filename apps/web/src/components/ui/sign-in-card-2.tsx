@@ -328,7 +328,7 @@ export function SignInCard({
 
               {/* Mode Toggle Link */}
               {onToggleMode && (
-                <div className="pt-3 border-t border-white/5 text-center relative z-10">
+                <div className="pt-3 border-t border-white/5 text-center relative z-10 space-y-2">
                   <button
                     type="button"
                     onClick={onToggleMode}
@@ -338,6 +338,13 @@ export function SignInCard({
                       ? "Don't have an account yet? Sign up"
                       : 'Already have an account? Sign in'}
                   </button>
+
+                  <div className="text-[10px] text-muted-foreground/80">
+                    By continuing, you acknowledge our{' '}
+                    <a href="/terms" className="text-indigo-400 hover:underline">Terms</a>
+                    {' '}and{' '}
+                    <a href="/privacy" className="text-indigo-400 hover:underline">Privacy Policy (DPDP Act)</a>.
+                  </div>
                 </div>
               )}
             </div>
