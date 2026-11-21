@@ -19,7 +19,7 @@ export function LeaderboardTable({ entries }: LeaderboardTableProps) {
   if (entries.length === 0) {
     return (
       <div className="p-12 text-center text-xs text-muted-foreground bg-card rounded-2xl border border-border">
-        No eligible activity recorded yet.
+        The campus leaderboard will light up as students complete challenges and voyages.
       </div>
     );
   }

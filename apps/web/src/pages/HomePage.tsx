@@ -235,21 +235,21 @@ export function HomePage() {
       )}
 
       {/* ── 4. People You Should Meet (Smart Match AI Collaborators) ── */}
-      {smartMatches.length > 0 && (
-        <div className="p-5 rounded-3xl glass-panel border border-indigo-500/20 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Brain className="w-4 h-4 text-indigo-400" />
-              <h2 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                People You Should Meet (AI Smart Match)
-              </h2>
-            </div>
-            <Link to="/network" className="text-xs font-bold text-indigo-400 hover:underline inline-flex items-center gap-1">
-              <span>View All Matches</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+      <div className="p-5 rounded-3xl glass-panel border border-indigo-500/20 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Brain className="w-4 h-4 text-indigo-400" />
+            <h2 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+              People You Should Meet (AI Smart Match)
+            </h2>
           </div>
+          <Link to="/network" className="text-xs font-bold text-indigo-400 hover:underline inline-flex items-center gap-1">
+            <span>View All Matches</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
 
+        {smartMatches.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {smartMatches.map((match: any) => {
               const u = match.user;
@@ -284,8 +284,19 @@ export function HomePage() {
               );
             })}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 text-center space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Add technical skills and interests to your profile to discover matching campus collaborators.
+            </p>
+            <Link to="/profile" className="inline-block">
+              <VynkButton size="xs" variant="primary">
+                Update Profile Skills
+              </VynkButton>
+            </Link>
+          </div>
+        )}
+      </div>
 
       {/* ── 5. Daily Challenge Spotlight ── */}
       {challenge && <DailyQuestWidget challenge={challenge} />}
