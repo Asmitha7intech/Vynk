@@ -247,7 +247,7 @@ export const authService = {
       throw new Error('Password reset token has expired. Please request a new one.');
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const passwordHash = await passwordService.hashPassword(newPassword);
 
     // Update user's password
     await (prisma as any).user.update({

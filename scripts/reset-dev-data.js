@@ -72,6 +72,13 @@ const preservedUsers = (db.users || []).filter(u =>
   PRESERVED_EMAILS.includes(u.email?.toLowerCase())
 );
 
+// Verified Argon2id password hash for 'Password123!'
+const CANONICAL_ARGON2ID_HASH = '$argon2id$v=19$m=65536,t=3,p=1$XURq5KWsiT63uUdgTUyU2g$JRm4SgWSEYsO0q5G9p7axOZx7hwptKAXPVc6F8vWAwA';
+preservedUsers.forEach(u => {
+  u.passwordHash = CANONICAL_ARGON2ID_HASH;
+  u.updatedAt = new Date().toISOString();
+});
+
 console.log(`[RESET] Preserving ${preservedUsers.length} authorized administrative accounts:`);
 preservedUsers.forEach(u => console.log(`  - ${u.displayName} (${u.email}) [Role: ${u.role}]`));
 

@@ -1,25 +1,61 @@
-name: CI
+name: VYNK Production CI Pipeline
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, clean-reset]
   pull_request:
-    branches: [main, master]
+    branches: [main, master, clean-reset]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  lint-and-typecheck:
+  verify:
+    name: Typecheck, Cleanliness, Automated Tests & Build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
         with:
           version: 11.22.0
-      - uses: actions/setup-node@v4
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'pnpm'
-      - run: pnpm install
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm build
+
+      - name: Install Monorepo Dependencies
+        run: pnpm install
+
+      - name: Verify Clean Repository (Zero Synthetic Data)
+        run: node scripts/verify-clean.js
+
+      - name: Typecheck All Packages
+        run: pnpm typecheck
+
+      - name: Run Backend Vitest Suite (API)
+        run: pnpm --filter @vynk/api test
+        env:
+          NODE_ENV: test
+          APP_ENV: test
+          JWT_SECRET: ci-pipeline-secret-key-for-testing-only-12345
+          JWT_REFRESH_SECRET: ci-pipeline-refresh-secret-key-for-testing-only-12345
+          COOKIE_SECRET: ci-pipeline-cookie-secret-for-testing-only-12345
+
+      - name: Run Frontend Vitest Suite (Web)
+        run: pnpm --filter @vynk/web test
+
+      - name: Build Web Production Application (Vite)
+        run: pnpm --filter @vynk/web build
+
+      - name: Verify Post-Test Repository Cleanliness
+        run: |
+          node scripts/reset-dev-data.js --confirm
+          node scripts/verify-clean.js

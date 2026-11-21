@@ -32,6 +32,7 @@ import { bigDataLabController } from './controllers/bigdata-lab.controller';
 import { notificationsController } from './controllers/notifications.controller';
 import { blocksController } from './controllers/blocks.controller';
 import { reportsController } from './controllers/reports.controller';
+import { prisma } from '@vynk/database';
 import multipart from '@fastify/multipart';
 import { getUploadsDir } from './utils/paths';
 import { getOnlineUserIds } from './realtime/socket';
@@ -108,10 +109,24 @@ export async function buildServer() {
     service: 'vynk-api',
   }));
 
-  fastify.get('/ready', async () => ({
-    status: 'ready',
-    database: 'connected',
-  }));
+  fastify.get('/ready', async (_request, reply) => {
+    try {
+      if (prisma && typeof (prisma as any).$queryRawUnsafe === 'function') {
+        await (prisma as any).$queryRawUnsafe('SELECT 1');
+      }
+      return reply.send({
+        status: 'ready',
+        database: 'connected',
+        timestamp: new Date().toISOString(),
+      });
+    } catch {
+      return reply.status(503).send({
+        status: 'unready',
+        database: 'disconnected',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
 
   fastify.get('/health/dependencies', async () => {
     const { outboxWorker } = await import('./services/outbox-worker.service.js');

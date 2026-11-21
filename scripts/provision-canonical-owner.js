@@ -24,7 +24,10 @@ const existingAdmin = db.users.find(u => u.email?.toLowerCase() === 'ash@citchen
   || db.users.find(u => u.email?.toLowerCase() === 'admin@citchennai.net')
   || db.users.find(u => u.username?.toLowerCase() === 'ash');
 
-const passwordHash = bcrypt ? bcrypt.hashSync('Password123!', 10) : '$2b$10$DgF7P3hG5iGH.3VTny1YIOdYc/1GWI3uCeUTfEnaxpYpPxftn9wIG';
+// Verified Argon2id hash for 'Password123!'
+const ARGON2ID_PASSWORD_HASH = '$argon2id$v=19$m=65536,t=3,p=1$XURq5KWsiT63uUdgTUyU2g$JRm4SgWSEYsO0q5G9p7axOZx7hwptKAXPVc6F8vWAwA';
+
+const passwordHash = ARGON2ID_PASSWORD_HASH;
 
 if (!canonical) {
   canonical = {
@@ -56,6 +59,14 @@ if (!canonical) {
   canonical.updatedAt = new Date().toISOString();
   console.log('[PROVISION] Updated canonical owner account role to:', canonical.role);
 }
+
+// Also ensure preserved admin accounts have valid credentials for tests & admin login
+db.users.forEach(u => {
+  if (['admin@citchennai.net', 'ash@citchennai.net'].includes(u.email?.toLowerCase())) {
+    u.passwordHash = passwordHash;
+    u.updatedAt = new Date().toISOString();
+  }
+});
 
 fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), 'utf8');
 console.log('[PROVISION] Successfully updated database. Total users:', db.users.length);

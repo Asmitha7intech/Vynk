@@ -63,31 +63,46 @@ describe('VYNK 5.0 — Authentication, Session Revocation & Project Collaboratio
     });
 
     it('executes end-to-end password recovery and revokes all prior active sessions', async () => {
-      const user = await prisma.user.findFirst();
-      if (!user) return;
-
-      // 1. User requests password reset
-      const forgotResult = await authService.forgotPassword(user.email);
-      expect(forgotResult.success).toBe(true);
-      expect(forgotResult.resetToken).toBeDefined();
-
-      // Active session before reset
-      const preSession = await authService.createSession(user.id, 'Old Device', '10.0.0.1');
-
-      // 2. User completes reset with token
-      const resetResult = await authService.resetPassword(forgotResult.resetToken!, 'BrandNewSecurePass#2026');
-      expect(resetResult.success).toBe(true);
-
-      // Verify old session was terminated
-      const refreshedSession = await (prisma as any).session.findUnique({
-        where: { id: preSession.id },
+      const testEmail = `pwd_reset_${Date.now()}@citchennai.net`;
+      const user = await (prisma as any).user.create({
+        data: {
+          email: testEmail,
+          username: `reset_user_${Date.now()}`,
+          displayName: 'Reset Test User',
+          passwordHash: 'dummy',
+          college: 'Chennai Institute of Technology',
+          role: 'STUDENT',
+        },
       });
-      expect(refreshedSession.revokedAt).not.toBeNull();
 
-      // Verify token cannot be reused
-      await expect(
-        authService.resetPassword(forgotResult.resetToken!, 'AnotherPassword#123')
-      ).rejects.toThrow();
+      try {
+        // 1. User requests password reset
+        const forgotResult = await authService.forgotPassword(user.email);
+        expect(forgotResult.success).toBe(true);
+        expect(forgotResult.resetToken).toBeDefined();
+
+        // Active session before reset
+        const preSession = await authService.createSession(user.id, 'Old Device', '10.0.0.1');
+
+        // 2. User completes reset with token
+        const resetResult = await authService.resetPassword(forgotResult.resetToken!, 'BrandNewSecurePass#2026');
+        expect(resetResult.success).toBe(true);
+
+        // Verify old session was terminated
+        const refreshedSession = await (prisma as any).session.findUnique({
+          where: { id: preSession.id },
+        });
+        expect(refreshedSession.revokedAt).not.toBeNull();
+
+        // Verify token cannot be reused
+        await expect(
+          authService.resetPassword(forgotResult.resetToken!, 'AnotherPassword#123')
+        ).rejects.toThrow();
+      } finally {
+        await (prisma as any).session.deleteMany({ where: { userId: user.id } }).catch(() => {});
+        await (prisma as any).passwordResetToken.deleteMany({ where: { userId: user.id } }).catch(() => {});
+        await (prisma as any).user.delete({ where: { id: user.id } }).catch(() => {});
+      }
     });
   });
 
