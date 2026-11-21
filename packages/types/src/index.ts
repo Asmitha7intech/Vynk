@@ -51,6 +51,7 @@ export interface User {
   id: string;
   email: string;
   emailVerified?: boolean;
+  isVerified?: boolean;
   username: string;
   displayName: string;
   avatarUrl?: string | null;

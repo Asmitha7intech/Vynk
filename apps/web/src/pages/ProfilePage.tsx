@@ -23,6 +23,11 @@ import {
   Upload,
   Trash2,
   Loader2,
+  Laptop,
+  Mail,
+  UserX,
+  RefreshCw,
+  LogOut,
 } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 import { AvatarUploadModal } from '../components/AvatarUploadModal';
@@ -40,7 +45,7 @@ export function ProfilePage() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuthStore();
   const [profileData, setProfileData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'VOYAGES' | 'SKILLS' | 'BOUNTIES' | 'JOURNEY'>('VOYAGES');
+  const [activeTab, setActiveTab] = useState<'VOYAGES' | 'SKILLS' | 'BOUNTIES' | 'JOURNEY' | 'SECURITY'>('VOYAGES');
   const [isLoading, setIsLoading] = useState(true);
   const [isConnectSent, setIsConnectSent] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -52,6 +57,16 @@ export function ProfilePage() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Security & Sessions Tab State
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
+  const [isLoadingBlocked, setIsLoadingBlocked] = useState(false);
+  const [verifyTokenInput, setVerifyTokenInput] = useState('');
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
   const { updateUser } = useAuthStore();
 
   const handleAvatarFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,6 +239,107 @@ export function ProfilePage() {
       setEditError(err.message || 'Failed to update profile. Please check inputs.');
     } finally {
       setIsSavingProfile(false);
+    }
+  };
+
+  const loadSecurityData = async () => {
+    setIsLoadingSessions(true);
+    setIsLoadingBlocked(true);
+    try {
+      const sRes = await api.listSessions();
+      const sessionList = Array.isArray(sRes) ? sRes : (sRes as any)?.sessions || [];
+      setSessions(sessionList);
+    } catch (e) {
+      console.error('Failed to load sessions', e);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+
+    try {
+      const bRes = await api.getBlockedUsers();
+      const blockList = Array.isArray(bRes) ? bRes : (bRes as any)?.data || [];
+      setBlockedUsers(blockList);
+    } catch (e) {
+      console.error('Failed to load blocked users', e);
+    } finally {
+      setIsLoadingBlocked(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'SECURITY' && isOwnProfile) {
+      loadSecurityData();
+    }
+  }, [activeTab, isOwnProfile]);
+
+  const handleRevokeSession = async (sessionId: string) => {
+    try {
+      await api.revokeSession(sessionId);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      setNotice('Device session revoked successfully.');
+      setTimeout(() => setNotice(null), 3000);
+    } catch (err: any) {
+      setNotice(err.message || 'Failed to revoke session.');
+      setTimeout(() => setNotice(null), 3000);
+    }
+  };
+
+  const handleRevokeAllSessions = async () => {
+    try {
+      await api.revokeAllSessions();
+      await loadSecurityData();
+      setNotice('All other active device sessions have been revoked.');
+      setTimeout(() => setNotice(null), 3500);
+    } catch (err: any) {
+      setNotice(err.message || 'Failed to revoke all sessions.');
+      setTimeout(() => setNotice(null), 3000);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    setIsResending(true);
+    setResendStatus(null);
+    try {
+      const res = await api.resendVerification();
+      setResendStatus(res?.message || 'Verification token generated. Please check your inbox or logs.');
+    } catch (err: any) {
+      setResendStatus(err.message || 'Failed to send verification email.');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleVerifyEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verifyTokenInput.trim()) return;
+    setIsVerifyingEmail(true);
+    try {
+      await api.verifyEmail(verifyTokenInput.trim());
+      setProfileData((prev: any) => ({
+        ...prev,
+        user: { ...prev.user, emailVerified: true, isVerified: true },
+      }));
+      updateUser({ emailVerified: true, isVerified: true });
+      setVerifyTokenInput('');
+      setNotice('Email verified successfully! Campus identity confirmed.');
+      setTimeout(() => setNotice(null), 3500);
+    } catch (err: any) {
+      setNotice(err.message || 'Invalid or expired verification code.');
+      setTimeout(() => setNotice(null), 3500);
+    } finally {
+      setIsVerifyingEmail(false);
+    }
+  };
+
+  const handleUnblockUser = async (targetUserId: string) => {
+    try {
+      await api.unblockUser(targetUserId);
+      setBlockedUsers((prev) => prev.filter((u) => u.id !== targetUserId));
+      setNotice('User unblocked.');
+      setTimeout(() => setNotice(null), 3000);
+    } catch (err: any) {
+      setNotice(err.message || 'Failed to unblock user.');
+      setTimeout(() => setNotice(null), 3000);
     }
   };
 
@@ -483,6 +599,7 @@ export function ProfilePage() {
           { id: 'SKILLS', label: `Verified Skills (${skills.length})` },
           { id: 'JOURNEY', label: 'Student Journey' },
           { id: 'BOUNTIES', label: `Badges (${bounties.length})` },
+          ...(isOwnProfile ? [{ id: 'SECURITY', label: 'Security & Sessions' }] : []),
         ].map((tab) => (
           <button
             key={tab.id}
@@ -603,6 +720,196 @@ export function ProfilePage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── 5. SECURITY & SESSIONS TAB (OWN PROFILE ONLY) ── */}
+      {activeTab === 'SECURITY' && isOwnProfile && (
+        <div className="space-y-6">
+          {/* Email Verification Status Card */}
+          <div className="p-6 rounded-3xl glass-card space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-indigo-400" />
+                <h3 className="text-sm font-black text-foreground">Campus Academic Email Verification</h3>
+              </div>
+              <span
+                className={`text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 ${
+                  (u.isVerified || u.emailVerified)
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                }`}
+              >
+                {(u.isVerified || u.emailVerified) ? (
+                  <>
+                    <CheckCircle2 className="w-3 h-3" /> Verified Student
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="w-3 h-3" /> Unverified
+                  </>
+                )}
+              </span>
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Your registered student address is <span className="font-mono text-foreground font-semibold">{currentUser?.email || u.email}</span>.
+              Verified student accounts have access to high-trust team collaboration, campus ambassador bounties, and verified project voyages.
+            </p>
+
+            {!(u.isVerified || u.emailVerified) && (
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <VynkButton
+                    size="sm"
+                    variant="outline"
+                    leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isResending ? 'animate-spin' : ''}`} />}
+                    onClick={handleResendEmail}
+                    disabled={isResending}
+                  >
+                    {isResending ? 'Sending...' : 'Send Verification Code'}
+                  </VynkButton>
+
+                  <form onSubmit={handleVerifyEmail} className="flex-1 flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Enter verification code..."
+                      value={verifyTokenInput}
+                      onChange={(e) => setVerifyTokenInput(e.target.value)}
+                      className="flex-1 h-9 px-3 rounded-xl bg-surface-elevated border border-surface-border text-xs text-foreground focus:border-indigo-400 focus:outline-none"
+                    />
+                    <VynkButton
+                      type="submit"
+                      size="sm"
+                      variant="primary"
+                      isLoading={isVerifyingEmail}
+                      disabled={!verifyTokenInput.trim()}
+                    >
+                      Confirm Code
+                    </VynkButton>
+                  </form>
+                </div>
+
+                {resendStatus && (
+                  <p className="text-xs text-indigo-300 bg-indigo-500/10 p-2.5 rounded-xl border border-indigo-500/20">
+                    {resendStatus}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Active Device Sessions Card */}
+          <div className="p-6 rounded-3xl glass-card space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <Laptop className="w-5 h-5 text-indigo-400" />
+                <h3 className="text-sm font-black text-foreground">Active Sessions & Authorized Devices</h3>
+              </div>
+              {sessions.length > 1 && (
+                <VynkButton
+                  size="xs"
+                  variant="outline"
+                  leftIcon={<LogOut className="w-3 h-3 text-rose-400" />}
+                  onClick={handleRevokeAllSessions}
+                >
+                  Revoke All Other Devices
+                </VynkButton>
+              )}
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              These are the active sessions logged into your student account. If you spot an unfamiliar device or IP address, revoke it immediately.
+            </p>
+
+            {isLoadingSessions ? (
+              <div className="p-6 text-center text-xs text-muted-foreground animate-pulse">
+                Loading active sessions...
+              </div>
+            ) : sessions.length === 0 ? (
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-xs text-muted-foreground text-center">
+                Current session active.
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {sessions.map((sess) => (
+                  <div
+                    key={sess.id}
+                    className="p-3.5 rounded-2xl bg-surface-elevated border border-surface-border flex items-center justify-between gap-4"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-foreground truncate max-w-xs sm:max-w-md">
+                          {sess.userAgent || 'Web Browser'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[11px] font-mono text-muted-foreground">
+                        <span>IP: {sess.ipAddress || '127.0.0.1'}</span>
+                        <span>•</span>
+                        <span>Logged in: {new Date(sess.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    <VynkButton
+                      size="xs"
+                      variant="ghost"
+                      onClick={() => handleRevokeSession(sess.id)}
+                      className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 shrink-0"
+                    >
+                      Revoke
+                    </VynkButton>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Blocked Accounts Card */}
+          <div className="p-6 rounded-3xl glass-card space-y-4">
+            <div className="flex items-center gap-2">
+              <UserX className="w-5 h-5 text-rose-400" />
+              <h3 className="text-sm font-black text-foreground">Blocked Accounts</h3>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Blocked accounts cannot message you, view your voyages, or see your activity in the campus feed.
+            </p>
+
+            {isLoadingBlocked ? (
+              <div className="p-6 text-center text-xs text-muted-foreground animate-pulse">
+                Loading blocked accounts...
+              </div>
+            ) : blockedUsers.length === 0 ? (
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-xs text-muted-foreground text-center">
+                You haven't blocked any accounts.
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {blockedUsers.map((bu) => (
+                  <div
+                    key={bu.id}
+                    className="p-3 rounded-2xl bg-surface-elevated border border-surface-border flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar src={bu.avatarUrl} fallback={bu.displayName || bu.username} size="sm" />
+                      <div>
+                        <p className="text-xs font-bold text-foreground">{bu.displayName || bu.username}</p>
+                        <p className="text-[10px] font-mono text-muted-foreground">@{bu.username}</p>
+                      </div>
+                    </div>
+
+                    <VynkButton
+                      size="xs"
+                      variant="outline"
+                      onClick={() => handleUnblockUser(bu.id)}
+                    >
+                      Unblock
+                    </VynkButton>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

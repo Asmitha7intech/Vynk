@@ -48,12 +48,28 @@ export function AdminPage() {
     setLastRefresh(new Date());
   };
 
+  const fetchReports = async () => {
+    try {
+      const res = await api.getReports();
+      if (res) setReports(Array.isArray(res) ? res : (res as any).data || []);
+    } catch {}
+  };
+
+  const handleResolveReport = async (reportId: string, action: 'RESOLVED' | 'DISMISSED') => {
+    try {
+      await api.resolveReport(reportId, action);
+      setReports((prev) => prev.map((r) => (r.id === reportId ? { ...r, status: action } : r)));
+    } catch {}
+  };
+
   useEffect(() => {
     setIsLoading(true);
     Promise.all([
       api.getPlatformMetrics().catch(() => null),
-    ]).then(([met]) => {
+      api.getReports().catch(() => null),
+    ]).then(([met, reps]) => {
       if (met) setMetrics(met);
+      if (reps) setReports(Array.isArray(reps) ? reps : (reps as any).data || []);
     }).finally(() => setIsLoading(false));
 
     fetchBigData();
@@ -315,6 +331,74 @@ export function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* ── Safety & Moderation Reports Queue ── */}
+      <div className="p-6 rounded-3xl glass-card space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5 text-rose-400" />
+            <h3 className="text-base font-bold text-foreground">Safety Reports & Moderation Queue</h3>
+          </div>
+          <span className="text-xs font-mono text-muted-foreground">{reports.length} total reports</span>
+        </div>
+
+        {reports.length === 0 ? (
+          <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 text-center text-xs text-muted-foreground">
+            No active moderation reports. Campus community is clean and safe.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {reports.map((report) => (
+              <div
+                key={report.id}
+                className="p-4 rounded-2xl bg-surface-elevated border border-surface-border flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap"
+              >
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-foreground">{report.targetType} Report</span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 text-muted-foreground">
+                      ID: {report.targetId}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        report.status === 'PENDING'
+                          ? 'bg-amber-500/20 text-amber-400'
+                          : 'bg-emerald-500/20 text-emerald-400'
+                      }`}
+                    >
+                      {report.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground">Reason:</span> {report.reason}
+                  </p>
+                  {report.details && (
+                    <p className="text-xs text-muted-foreground/80 italic">"{report.details}"</p>
+                  )}
+                </div>
+                {report.status === 'PENDING' && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <VynkButton
+                      size="xs"
+                      variant="primary"
+                      onClick={() => handleResolveReport(report.id, 'RESOLVED')}
+                    >
+                      Resolve
+                    </VynkButton>
+                    <VynkButton
+                      size="xs"
+                      variant="ghost"
+                      onClick={() => handleResolveReport(report.id, 'DISMISSED')}
+                    >
+                      Dismiss
+                    </VynkButton>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

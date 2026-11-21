@@ -360,7 +360,24 @@ export const api = {
   getTrending: (department?: string) => request<any>('/analytics/bigdata/trending' + (department ? '?department=' + encodeURIComponent(department) : '')),
   getOutboxStats: () => request<any>('/analytics/outbox/stats'),
   getDependencyHealth: () => request<any>('/health/dependencies').catch(() => null),
-  createReport: (data: any) => request<any>('/admin/reports', { method: 'POST', body: JSON.stringify(data) }),
+  createReport: (data: any) => request<any>('/reports', { method: 'POST', body: JSON.stringify(data) }),
+  getReports: (status?: string) => request<any>('/reports' + (status ? `?status=${status}` : '')),
+  resolveReport: (id: string, action: 'RESOLVED' | 'DISMISSED' = 'RESOLVED') =>
+    request<any>(`/reports/${id}/resolve`, { method: 'PATCH', body: JSON.stringify({ action }) }),
+
+  // Safety & Blocking
+  getBlockedUsers: () => request<any>('/blocks'),
+  blockUser: (targetUserId: string) => request<any>(`/blocks/${targetUserId}`, { method: 'POST' }),
+  unblockUser: (targetUserId: string) => request<any>(`/blocks/${targetUserId}`, { method: 'DELETE' }),
+
+  // Multi-Device Sessions
+  listSessions: () => request<any>('/auth/sessions'),
+  revokeSession: (sessionId: string) => request<any>(`/auth/sessions/${sessionId}`, { method: 'DELETE' }),
+  revokeAllSessions: () => request<any>('/auth/sessions/revoke-all', { method: 'POST' }),
+
+  // Email Verification
+  verifyEmail: (token: string) => request<any>('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }),
+  resendVerification: () => request<any>('/auth/resend-verification', { method: 'POST' }),
 
   // -------------------------------------------------------------
   // VYNK PULSE — DUCKDB & BIG DATA INTELLIGENCE
