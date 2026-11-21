@@ -45,7 +45,7 @@ export function EventsPage() {
             <div className="flex items-center gap-2">
               <Pill label="Hackathons & Summits" variant="rose" size="xs" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+            <h1 className="text-xl sm:text-2xl font-black tracking-normal text-foreground">
               Campus Opportunities & Hackathons
             </h1>
             <p className="text-xs text-muted-foreground max-w-lg leading-relaxed">

@@ -212,7 +212,7 @@ export function PulsePage() {
                 </span>
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-normal text-white flex items-center gap-3">
                 <Activity className="w-7 h-7 text-cyan-400" />
                 VYNK Pulse — Student Ecosystem Intelligence
               </h1>

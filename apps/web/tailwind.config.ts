@@ -12,6 +12,14 @@ export default {
         display: ['Syne', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
       },
+      letterSpacing: {
+        tighter: '0em',
+        tight: '0em',
+        normal: '0em',
+        wide: '0.025em',
+        wider: '0.05em',
+        widest: '0.1em',
+      },
       colors: {
         background: 'var(--background)',
         foreground: 'var(--foreground)',

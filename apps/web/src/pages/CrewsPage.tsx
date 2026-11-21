@@ -52,7 +52,7 @@ export function CrewsPage() {
                 {totalOpenSlots} builder slots open on campus
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+            <h1 className="text-xl sm:text-2xl font-black tracking-normal text-foreground">
               Hackathon Crews & Startup Squads
             </h1>
             <p className="text-xs text-muted-foreground max-w-lg leading-relaxed">

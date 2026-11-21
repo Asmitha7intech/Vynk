@@ -117,7 +117,7 @@ export function HomePage() {
                 ) : null}
               </div>
 
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+              <h1 className="text-xl sm:text-2xl font-black tracking-normal text-foreground">
                 {getGreeting()}, {user?.displayName || 'Student Builder'}.
               </h1>
 

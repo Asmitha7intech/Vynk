@@ -259,7 +259,7 @@ export function VoyageDetailsPage() {
                 </div>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl font-black text-foreground tracking-tight leading-tight">
+              <h1 className="text-2xl sm:text-4xl font-black text-foreground tracking-normal leading-tight">
                 {voyage.title}
               </h1>
 

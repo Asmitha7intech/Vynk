@@ -45,9 +45,17 @@
     --neon-emerald: #10B981;
   }
 
-  /* Headings use Syne font */
-  h1, h2, h3, .font-display {
+  /* Typography standards — Restrict Syne to display wordmarks/heroes; Plus Jakarta Sans for UI/Headings */
+  .font-display {
     font-family: 'Syne', sans-serif;
+    letter-spacing: 0.01em;
+    line-height: 1.15;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: 0em;
+    line-height: 1.3;
   }
 
   /* Form control defaults with proper theme support */

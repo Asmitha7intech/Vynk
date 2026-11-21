@@ -108,7 +108,7 @@ export function Navbar({ onOpenCreatePost, onOpenCommandPalette }: NavbarProps) 
             <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-background animate-pulse" />
           </div>
           <div className="flex flex-col">
-            <span className="font-black text-xl tracking-tight bg-gradient-to-r from-foreground via-foreground to-indigo-400 bg-clip-text text-transparent leading-none">
+            <span className="font-black text-xl tracking-normal bg-gradient-to-r from-foreground via-foreground to-indigo-400 bg-clip-text text-transparent leading-none">
               VYNK
             </span>
             <span className="text-[9px] font-mono tracking-wider uppercase text-muted-foreground font-bold mt-0.5">

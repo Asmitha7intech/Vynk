@@ -202,7 +202,7 @@ export function CommunitiesPage() {
                 Verified Student Organizations & Technical Guilds
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+            <h1 className="text-xl sm:text-2xl font-black tracking-normal text-foreground">
               Campus Communities
             </h1>
             <p className="text-xs text-muted-foreground max-w-lg leading-relaxed">

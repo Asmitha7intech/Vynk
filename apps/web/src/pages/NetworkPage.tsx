@@ -363,7 +363,7 @@ export function NetworkPage() {
             </span>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-normal text-foreground">
               People & Collaborative Network
             </h1>
             <Link

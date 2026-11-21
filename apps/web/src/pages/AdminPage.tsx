@@ -131,7 +131,7 @@ export function AdminPage() {
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Live Telemetry
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+            <h1 className="text-xl sm:text-2xl font-black tracking-normal text-foreground">
               Admin & Big Data Intelligence Center
             </h1>
             <p className="text-xs text-muted-foreground leading-relaxed max-w-xl">

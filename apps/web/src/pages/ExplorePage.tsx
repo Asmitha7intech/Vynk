@@ -112,7 +112,7 @@ export function ExplorePage() {
           <div className="flex items-center gap-2">
             <Pill label="Campus Discovery Engine" variant="indigo" size="xs" />
           </div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+          <h1 className="text-xl sm:text-2xl font-black tracking-normal text-foreground">
             Explore the Student Ecosystem
           </h1>
           <p className="text-xs text-muted-foreground leading-relaxed max-w-lg">

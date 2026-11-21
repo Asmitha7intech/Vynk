@@ -57,7 +57,7 @@ export function VoyagesPage() {
                 {voyages.length} verified projects live
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+            <h1 className="text-xl sm:text-2xl font-black tracking-normal text-foreground">
               Voyages Portfolio Gallery
             </h1>
             <p className="text-xs text-muted-foreground max-w-lg leading-relaxed">
