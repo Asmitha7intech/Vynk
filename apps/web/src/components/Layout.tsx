@@ -26,7 +26,7 @@ export function Layout({ showRightPanel = true }: LayoutProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-indigo-500/30 selection:text-indigo-400 relative">
+    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-indigo-500/30 selection:text-indigo-400 relative overflow-x-hidden">
       {/* Global Cursor-Reactive Neon Flow Canvas Backdrop */}
       <NeonFlowBackground />
 
