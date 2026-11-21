@@ -1,34 +1,44 @@
 import React, { useState } from 'react';
-import { Sparkles, CheckCircle2, XCircle, ChevronRight, HelpCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Sparkles, CheckCircle2, XCircle, ChevronRight, HelpCircle, AlertCircle } from 'lucide-react';
 import { Card, CardHeader, CardContent } from './Card';
 import { Button } from './Button';
 import { Badge } from './Badge';
 import { DailyChallenge } from '@vynk/types';
 import { api } from '../lib/api';
 import { useGamificationStore } from '../stores/gamificationStore';
+import { useAuthStore } from '../stores/authStore';
 
 export function DailyQuestWidget({ challenge }: { challenge: DailyChallenge }) {
+  const { user } = useAuthStore();
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { awardXPFeedback } = useGamificationStore();
 
   const handleOptionSelect = (index: number) => {
     if (isSubmitted) return;
     setSelectedOption(index);
+    setErrorMsg(null);
   };
 
   const handleSubmit = async () => {
     if (selectedOption === null || isSubmitted) return;
+    if (!user) {
+      setErrorMsg('Please sign in to submit your solution and record XP.');
+      return;
+    }
     setIsSubmitting(true);
+    setErrorMsg(null);
     try {
       const res = await api.submitDailyChallenge(challenge.id, selectedOption);
       setResult(res);
       setIsSubmitted(true);
       awardXPFeedback(res.xpEarned, `Daily Challenge: ${challenge.title}`);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Submission failed. Please check your connection.');
     } finally {
       setIsSubmitting(false);
     }
@@ -98,6 +108,21 @@ export function DailyQuestWidget({ challenge }: { challenge: DailyChallenge }) {
             );
           })}
         </div>
+
+        {/* Error / Guest message */}
+        {errorMsg && (
+          <div className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+            {!user && (
+              <Link to="/auth" className="underline font-bold text-amber-400 hover:text-amber-200 ml-2 shrink-0">
+                Sign In
+              </Link>
+            )}
+          </div>
+        )}
 
         {/* Action / Result explanation */}
         {!isSubmitted ? (

@@ -1,5 +1,6 @@
 import { prisma } from '@vynk/database';
 import { LeaderboardScope } from '@vynk/types';
+import { eventService } from './event.service';
 
 export const gamificationService = {
   calculateLevel: (xp: number): number => {
@@ -21,6 +22,7 @@ export const gamificationService = {
 
     const newXP = user.xp + amount;
     const newLevel = gamificationService.calculateLevel(newXP);
+    const leveledUp = newLevel > user.level;
 
     const [updatedUser, transaction] = await prisma.$transaction([
       prisma.user.update({
@@ -41,7 +43,38 @@ export const gamificationService = {
       }),
     ]);
 
-    return { user: updatedUser, transaction, leveledUp: newLevel > user.level };
+    await eventService.publish({
+      eventType: 'XP_EARNED',
+      userId,
+      college: updatedUser.college || undefined,
+      department: updatedUser.department || undefined,
+      payload: {
+        userId,
+        amount,
+        reason,
+        sourceType,
+        sourceId,
+        totalXp: newXP,
+        level: newLevel,
+      },
+    });
+
+    if (leveledUp) {
+      await eventService.publish({
+        eventType: 'LEVEL_UP',
+        userId,
+        college: updatedUser.college || undefined,
+        department: updatedUser.department || undefined,
+        payload: {
+          userId,
+          oldLevel: user.level,
+          newLevel,
+          totalXp: newXP,
+        },
+      });
+    }
+
+    return { user: updatedUser, transaction, leveledUp };
   },
 
   getLeaderboard: async (scope: LeaderboardScope, scopeFilter?: string, limit = 50) => {

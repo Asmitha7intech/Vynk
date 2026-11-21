@@ -150,6 +150,7 @@ export interface Post {
   sharesCount: number;
   isLikedByMe?: boolean;
   isSavedByMe?: boolean;
+  comments?: Comment[];
   createdAt: string;
   updatedAt: string;
   author: User;
@@ -196,6 +197,11 @@ export interface Voyage {
   creator: User;
   members: VoyageMember[];
   milestones: VoyageMilestone[];
+  joinRequests?: VoyageJoinRequest[];
+  tasks?: VoyageTask[];
+  discussions?: VoyageDiscussion[];
+  activities?: VoyageActivity[];
+  teamCapacity?: number;
 }
 
 export interface VoyageSummary {
@@ -225,6 +231,60 @@ export interface VoyageMilestone {
   description: string;
   isCompleted: boolean;
   dueDate?: string | null;
+}
+
+export type ProjectJoinRequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
+
+export interface VoyageJoinRequest {
+  id: string;
+  projectId: string;
+  userId: string;
+  roleName: string;
+  message: string;
+  skills: string[];
+  status: ProjectJoinRequestStatus;
+  createdAt: string;
+  updatedAt: string;
+  user?: User;
+}
+
+export type ProjectTaskStatus = 'TODO' | 'IN_PROGRESS' | 'COMPLETED';
+export type ProjectTaskPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export interface VoyageTask {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  status: ProjectTaskStatus;
+  priority: ProjectTaskPriority;
+  assigneeId?: string | null;
+  dueDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignee?: User | null;
+}
+
+export interface VoyageDiscussion {
+  id: string;
+  projectId: string;
+  authorId: string;
+  content: string;
+  isPinned?: boolean;
+  isDeleted?: boolean;
+  createdAt: string;
+  updatedAt: string;
+  author?: User | null;
+}
+
+export interface VoyageActivity {
+  id: string;
+  projectId: string;
+  userId: string;
+  userName: string;
+  action: string;
+  details?: string;
+  createdAt: string;
 }
 
 // -------------------------------------------------------------
@@ -527,6 +587,7 @@ export interface TokenPayload {
   email: string;
   username: string;
   role: Role;
+  sessionId?: string;
 }
 
 export interface AuthResponse {
@@ -585,3 +646,263 @@ export interface UserRankExplanation {
   xpToNextRank: number;
   streakBonusApplied: number;
 }
+
+// -------------------------------------------------------------
+// EVENT-DRIVEN ARCHITECTURE & BIG DATA TELEMETRY CONTRACTS
+// -------------------------------------------------------------
+
+export type VynkEventType =
+  // Auth & Identity
+  | 'USER_REGISTERED'
+  | 'USER_LOGGED_IN'
+  | 'USER_LOGGED_OUT'
+  | 'USER_PASSWORD_RESET'
+  | 'USER_AVATAR_UPDATED'
+  | 'USER_PROFILE_UPDATED'
+  | 'SKILL_ADDED'
+  | 'SKILL_VERIFIED'
+  | 'INTEREST_ADDED'
+  // Posts & Interactions
+  | 'POST_CREATED'
+  | 'POST_LIKED'
+  | 'POST_UNLIKED'
+  | 'POST_COMMENTED'
+  | 'POST_VIEWED'
+  | 'FEED_SCROLLED'
+  // Voyages (Projects)
+  | 'VOYAGE_CREATED'
+  | 'VOYAGE_UPDATED'
+  | 'VOYAGE_STARRED'
+  | 'VOYAGE_FORKED'
+  | 'VOYAGE_MILESTONE_COMPLETED'
+  | 'VOYAGE_JOIN_REQUESTED'
+  | 'VOYAGE_JOIN_ACCEPTED'
+  | 'VOYAGE_JOIN_REJECTED'
+  | 'VOYAGE_TASK_CREATED'
+  | 'VOYAGE_TASK_UPDATED'
+  | 'VOYAGE_DISCUSSION_POSTED'
+  // Crews (Teams)
+  | 'CREW_CREATED'
+  | 'CREW_UPDATED'
+  | 'CREW_APPLICATION_SUBMITTED'
+  | 'CREW_APPLICATION_ACCEPTED'
+  | 'CREW_APPLICATION_REJECTED'
+  | 'CREW_MEMBER_JOINED'
+  | 'CREW_MEMBER_LEFT'
+  // Quests & Challenges
+  | 'DAILY_CHALLENGE_ATTEMPTED'
+  | 'QUIZ_STARTED'
+  | 'QUIZ_QUESTION_ANSWERED'
+  | 'QUIZ_COMPLETED'
+  // Mentorship
+  | 'MENTORSHIP_REQUESTED'
+  | 'MENTORSHIP_ACCEPTED'
+  | 'MENTORSHIP_DECLINED'
+  | 'MENTORSHIP_COMPLETED'
+  // Messaging
+  | 'CONVERSATION_CREATED'
+  | 'MESSAGE_SENT'
+  // Gamification & Progression
+  | 'XP_EARNED'
+  | 'LEVEL_UP'
+  | 'BADGE_UNLOCKED'
+  | 'STREAK_INCREMENTED'
+  | 'STREAK_BROKEN'
+  // Matching & Recommendation
+  | 'MATCH_EXPLORED'
+  | 'RECOMMENDATION_IMPRESSION'
+  | 'RECOMMENDATION_CLICKED'
+  | 'RECOMMENDATION_ACCEPTED'
+  | 'RECOMMENDATION_DISMISSED'
+  // Communities
+  | 'COMMUNITY_CREATED'
+  | 'COMMUNITY_UPDATED'
+  | 'COMMUNITY_JOINED'
+  | 'COMMUNITY_REQUESTED'
+  | 'COMMUNITY_LEFT';
+
+export interface EventMetadata {
+  ip?: string;
+  userAgent?: string;
+  source?: string;
+  clientTimestamp?: string;
+  [key: string]: any;
+}
+
+export interface VynkEvent<T = any> {
+  eventId: string;
+  eventType: VynkEventType;
+  timestamp: string;
+  correlationId: string;
+  causationId?: string;
+  version: number;
+  dataSource: 'PROD' | 'SYNTHETIC';
+  userId?: string;
+  college?: string;
+  department?: string;
+  payload: T;
+  metadata?: EventMetadata;
+}
+
+export interface EventOutboxRecord {
+  id: string;
+  eventId: string;
+  eventType: string;
+  topic: string;
+  partitionKey?: string | null;
+  payload: string;
+  status: 'PENDING' | 'PUBLISHED' | 'FAILED' | 'DEAD_LETTER';
+  retryCount: number;
+  lastError?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string | null;
+}
+
+export type RecommendationTargetType = 'CREW' | 'COLLABORATOR' | 'QUEST' | 'POST' | 'VOYAGE';
+export type RecommendationFeedbackAction = 'CLICK' | 'ACCEPT' | 'DISMISS' | 'SAVE';
+
+export interface RecommendationFeedbackRecord {
+  id: string;
+  userId: string;
+  recommendationType: RecommendationTargetType;
+  targetId: string;
+  action: RecommendationFeedbackAction;
+  context?: string | null;
+  createdAt: string;
+}
+
+export interface KafkaTopicMetrics {
+  topic: string;
+  partitionCount: number;
+  producedCount: number;
+  lastProducedAt?: string;
+  status: 'ACTIVE' | 'FALLBACK_LOCAL';
+}
+
+// -------------------------------------------------------------
+// 12. CLASSROOM DIRECTORY
+// -------------------------------------------------------------
+
+export interface ClassroomDirectoryRecord {
+  id: string;
+  studentId: string;
+  originalDisplayName: string;
+  normalizedName: string;
+  department: string;
+  cohort: string;
+  graduationYear: number;
+  isClaimed: boolean;
+  claimedUserId?: string | null;
+  claimedAt?: string | null;
+  claimVerificationMethod?: string | null;
+  notes?: string | null;
+  auditTrail: Array<{ timestamp: string; updatedBy: string; change: string }>;
+  createdAt: string;
+  updatedAt: string;
+  claimedUser?: {
+    id: string;
+    displayName: string;
+    username: string;
+    avatarUrl?: string | null;
+    headline?: string | null;
+  } | null;
+}
+
+// -------------------------------------------------------------
+// 13. BIG DATA LAB & SYLLABUS JOBS
+// -------------------------------------------------------------
+
+export type BigDataConceptId =
+  | 'concept-1' // HDFS Unstructured Import/Export
+  | 'concept-2' // SQL <-> HDFS Import/Export
+  | 'concept-3' // Hadoop MapReduce
+  | 'concept-4' // MongoDB NoSQL
+  | 'concept-5' // Apache Pig
+  | 'concept-6'; // Apache Hive
+
+export type BigDataJobStatus = 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
+
+export type BigDataExecutionMode =
+  | 'NATIVE'
+  | 'HADOOP_STREAMING'
+  | 'PIG_LATIN'
+  | 'HIVE_METASTORE'
+  | 'MONGODB_AGGREGATION'
+  | 'LOCAL_FALLBACK';
+
+export interface BigDataJobRecord {
+  id: string;
+  conceptId: BigDataConceptId;
+  title: string;
+  datasetName: string;
+  status: BigDataJobStatus;
+  startTime: string;
+  endTime?: string | null;
+  durationMs: number;
+  inputPath: string;
+  outputPath: string;
+  inputRowCount: number;
+  outputRowCount: number;
+  rejectedRowCount: number;
+  executionMode: BigDataExecutionMode;
+  logs: string[];
+  errorSummary?: string | null;
+  outputPreview: any;
+  metrics: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BigDataServiceHealth {
+  service: string;
+  displayName: string;
+  status: 'ONLINE' | 'OFFLINE' | 'LOCAL_FALLBACK';
+  host?: string;
+  port?: number;
+  message: string;
+  latencyMs?: number;
+  lastChecked: string;
+}
+
+// -------------------------------------------------------------
+// 14. COMMUNITIES & COLLABORATIVE SPACES
+// -------------------------------------------------------------
+
+export type CommunityRole = 'ADMIN' | 'MODERATOR' | 'MEMBER';
+export type CommunityMembershipStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface Community {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  avatarUrl?: string | null;
+  bannerUrl?: string | null;
+  category: string;
+  tags?: string[];
+  creatorId?: string | null;
+  creator?: User | null;
+  isPrivate?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  members?: CommunityMember[];
+  _count?: {
+    members?: number;
+    posts?: number;
+  };
+}
+
+export interface CommunityMember {
+  id: string;
+  communityId: string;
+  community?: Community;
+  userId: string;
+  user?: User;
+  role: CommunityRole;
+  status: CommunityMembershipStatus;
+  joinedAt: string;
+}
+
+
+

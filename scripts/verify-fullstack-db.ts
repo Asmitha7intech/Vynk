@@ -205,6 +205,19 @@ async function testFullDatabaseFlow() {
     console.log(`Results: ${testPassed} Passed, ${testFailed} Failed`);
     console.log(`========================================\n`);
 
+    // Clean up test records so test runs remain idempotent and do not pollute the operational feed
+    try {
+      const dbAfter = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+      if (dbAfter.posts) dbAfter.posts = dbAfter.posts.filter((p: any) => p.id !== createdPostId);
+      if (dbAfter.users) dbAfter.users = dbAfter.users.filter((u: any) => u.email !== testEmail);
+      if (dbAfter.reactions) dbAfter.reactions = dbAfter.reactions.filter((r: any) => r.postId !== createdPostId);
+      if (dbAfter.sessions) dbAfter.sessions = dbAfter.sessions.filter((s: any) => s.userId !== (diskData.users.find((u: any) => u.email === testEmail)?.id));
+      fs.writeFileSync(dbPath, JSON.stringify(dbAfter, null, 2), 'utf-8');
+      console.log('🧹 Test verification artifacts safely cleaned from database.');
+    } catch (cleanErr) {
+      console.warn('Could not clean test records:', cleanErr);
+    }
+
     if (testFailed > 0) {
       process.exit(1);
     }

@@ -1,5 +1,6 @@
 import { crewRepository } from '../repositories/crew.repository';
 import { prisma } from '@vynk/database';
+import { eventService } from './event.service';
 
 export const crewService = {
   listCrews: (category?: string) => crewRepository.listCrews(category),
@@ -25,6 +26,19 @@ export const crewService = {
       });
     }
 
+    await eventService.publish({
+      eventType: 'CREW_CREATED',
+      userId: captainId,
+      payload: {
+        crewId: crew.id,
+        name: crew.name,
+        category: crew.category,
+        captainId,
+        targetHackathon: crew.targetHackathon,
+        maxMembers: crew.maxMembers,
+      },
+    });
+
     return crew;
   },
 
@@ -41,7 +55,19 @@ export const crewService = {
       throw new Error('You are already an active member of this crew squad.');
     }
 
-    return crewRepository.addMember(crewId, userId, 'CONTRIBUTOR', roleName || 'Contributor');
+    const member = await crewRepository.addMember(crewId, userId, 'CONTRIBUTOR', roleName || 'Contributor');
+
+    await eventService.publish({
+      eventType: 'CREW_MEMBER_JOINED',
+      userId,
+      payload: {
+        crewId,
+        userId,
+        roleName: roleName || 'Contributor',
+      },
+    });
+
+    return member;
   },
 
   updateAgreement: async (crewId: string, data: any) => {

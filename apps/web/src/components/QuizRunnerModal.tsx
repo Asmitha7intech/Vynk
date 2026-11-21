@@ -4,6 +4,7 @@ import { Button } from './Button';
 import { Clock, CheckCircle2, ChevronRight, ChevronLeft, AlertCircle } from 'lucide-react';
 import { Quiz } from '@vynk/types';
 import { api } from '../lib/api';
+import { useAuthStore } from '../stores/authStore';
 import { QuizResultsModal } from './QuizResultsModal';
 
 interface QuizRunnerModalProps {
@@ -13,10 +14,12 @@ interface QuizRunnerModalProps {
 }
 
 export function QuizRunnerModal({ isOpen, onClose, quiz }: QuizRunnerModalProps) {
+  const { user, updateUser } = useAuthStore();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
   const [secondsRemaining, setSecondsRemaining] = useState(quiz.timeLimitMinutes * 60);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
 
@@ -28,6 +31,7 @@ export function QuizRunnerModal({ isOpen, onClose, quiz }: QuizRunnerModalProps)
     setSecondsRemaining(quiz.timeLimitMinutes * 60);
     setCurrentIndex(0);
     setSelectedAnswers({});
+    setError(null);
     setShowResults(false);
 
     const timer = setInterval(() => {
@@ -53,6 +57,11 @@ export function QuizRunnerModal({ isOpen, onClose, quiz }: QuizRunnerModalProps)
   };
 
   const handleSubmit = async () => {
+    setError(null);
+    if (!user) {
+      setError('Please sign in to submit your quiz and record your XP rewards.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       const answersPayload = questions.map((q) => ({
@@ -67,8 +76,12 @@ export function QuizRunnerModal({ isOpen, onClose, quiz }: QuizRunnerModalProps)
       );
       setResults(res);
       setShowResults(true);
-    } catch (err) {
+      if (res?.xpEarned && res.xpEarned > 0 && user) {
+        updateUser({ xp: (user.xp || 0) + res.xpEarned });
+      }
+    } catch (err: any) {
       console.error(err);
+      setError(err?.message || 'Quiz submission failed. Please verify your connection.');
     } finally {
       setIsSubmitting(false);
     }
@@ -135,6 +148,21 @@ export function QuizRunnerModal({ isOpen, onClose, quiz }: QuizRunnerModalProps)
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Error Banner */}
+          {error && (
+            <div className="flex items-center gap-2 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {!user && (
+            <div className="flex items-center gap-2 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>You are viewing this quiz as a guest. Please sign in to submit answers and earn XP.</span>
             </div>
           )}
 

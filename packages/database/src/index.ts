@@ -65,10 +65,12 @@ function isConnectionError(err: any): boolean {
 function createLocalClient(): any {
   const delegates = new Map<string, any>();
 
+  let proxy: any;
+
   const client: any = {
     $transaction: async (arg: any) => {
       if (typeof arg === 'function') {
-        return arg(client);
+        return arg(proxy);
       }
       if (Array.isArray(arg)) {
         return Promise.all(arg);
@@ -81,7 +83,7 @@ function createLocalClient(): any {
     $disconnect: async () => {},
   };
 
-  return new Proxy(client, {
+  proxy = new Proxy(client, {
     get(target, prop: string | symbol) {
       if (typeof prop === 'symbol') return undefined;
       if (prop in target) return target[prop];
@@ -92,6 +94,8 @@ function createLocalClient(): any {
       return delegates.get(prop);
     },
   });
+
+  return proxy;
 }
 
 const localClient = createLocalClient();

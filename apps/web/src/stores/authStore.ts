@@ -1,29 +1,93 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '@vynk/types';
+import { connectSocket, disconnectSocket } from '../lib/socket';
 
 interface AuthState {
   user: User | null;
   token: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
-  login: (user: User, token: string) => void;
-  logout: () => void;
+  login: (user: User, token: string, refreshToken?: string) => void;
+  setTokens: (accessToken: string, refreshToken?: string) => void;
+  logout: () => Promise<void>;
   updateUser: (updatedData: Partial<User>) => void;
+  initializeAuth: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
+      refreshToken: null,
       isAuthenticated: false,
-      login: (user, token) => {
-        localStorage.setItem('vynk_access_token', token);
-        set({ user, token, isAuthenticated: true });
+      initializeAuth: async () => {
+        const rawToken = localStorage.getItem('vynk_access_token');
+        const token = rawToken?.startsWith('Bearer ') ? rawToken.slice(7) : rawToken;
+        if (!token) {
+          set({ user: null, token: null, refreshToken: null, isAuthenticated: false });
+          return;
+        }
+        try {
+          const { api } = await import('../lib/api');
+          const res = await api.getCurrentUser();
+          if (res?.user) {
+            set({ user: res.user, token, isAuthenticated: true });
+            connectSocket(token);
+          }
+        } catch (err: any) {
+          if (err?.status === 401) {
+            localStorage.removeItem('vynk_access_token');
+            localStorage.removeItem('vynk_refresh_token');
+            disconnectSocket();
+            set({ user: null, token: null, refreshToken: null, isAuthenticated: false });
+          }
+        }
       },
-      logout: () => {
-        localStorage.removeItem('vynk_access_token');
-        set({ user: null, token: null, isAuthenticated: false });
+      login: (user, token, refreshToken) => {
+        const cleanToken = token.startsWith('Bearer ') ? token.slice(7) : token;
+        localStorage.setItem('vynk_access_token', cleanToken);
+        if (refreshToken) {
+          localStorage.setItem('vynk_refresh_token', refreshToken);
+        }
+        connectSocket(cleanToken);
+        set({
+          user,
+          token: cleanToken,
+          refreshToken: refreshToken || get().refreshToken,
+          isAuthenticated: true,
+        });
+      },
+      setTokens: (accessToken, refreshToken) => {
+        const cleanToken = accessToken.startsWith('Bearer ') ? accessToken.slice(7) : accessToken;
+        localStorage.setItem('vynk_access_token', cleanToken);
+        if (refreshToken) {
+          localStorage.setItem('vynk_refresh_token', refreshToken);
+        }
+        connectSocket(cleanToken);
+        set((state) => ({
+          token: cleanToken,
+          refreshToken: refreshToken || state.refreshToken,
+        }));
+      },
+      logout: async () => {
+        try {
+          const { api } = await import('../lib/api');
+          await api.logout().catch(() => {});
+        } catch {
+          // Proceed with client cleanup
+        } finally {
+          localStorage.removeItem('vynk_access_token');
+          localStorage.removeItem('vynk_refresh_token');
+          disconnectSocket();
+          set({
+            user: null,
+            token: null,
+            refreshToken: null,
+            isAuthenticated: false,
+          });
+        }
       },
       updateUser: (updatedData) =>
         set((state) => ({
@@ -32,6 +96,16 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'vynk_auth_state',
+      onRehydrateStorage: () => (state) => {
+        if (state?.token) {
+          localStorage.setItem('vynk_access_token', state.token);
+          if (state.refreshToken) {
+            localStorage.setItem('vynk_refresh_token', state.refreshToken);
+          }
+          connectSocket(state.token);
+        }
+      },
     }
   )
 );
+

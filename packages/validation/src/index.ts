@@ -5,7 +5,32 @@ import { z } from 'zod';
 // -------------------------------------------------------------
 
 export const RegisterSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z
+    .string()
+    .email('Please enter a valid email address')
+    .refine(
+      (email) => {
+        const domain = email.split('@')[1]?.toLowerCase() || '';
+        return (
+          domain.endsWith('.edu') ||
+          domain.includes('.edu.') ||
+          domain.includes('.ac.') ||
+          domain.endsWith('.org') ||
+          domain.includes('student') ||
+          domain.includes('college') ||
+          domain.includes('campus') ||
+          domain.includes('univ') ||
+          domain === 'citchennai.net' ||
+          domain === 'cit.edu.in' ||
+          domain.includes('cit') ||
+          (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') ||
+          (typeof process !== 'undefined' && process.env?.ALLOW_ANY_EMAIL === 'true')
+        );
+      },
+      {
+        message: 'Registration requires an authorized college / institutional email address (.edu, .ac, etc.)',
+      }
+    ),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   username: z
     .string()
@@ -29,6 +54,17 @@ export const RefreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 export const refreshTokenSchema = RefreshTokenSchema;
+
+export const ForgotPasswordSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+});
+export const forgotPasswordSchema = ForgotPasswordSchema;
+
+export const ResetPasswordSchema = z.object({
+  token: z.string().min(1, 'Reset token is required'),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+});
+export const resetPasswordSchema = ResetPasswordSchema;
 
 export const OnboardingStepSchema = z.object({
   step: z.number().int().min(1).max(10),
@@ -104,9 +140,9 @@ export const CreatePostSchema = z.object({
   ]).default('TEXT'),
   title: z.string().max(120).optional(),
   content: z.string().min(1, 'Post content cannot be empty').max(3000),
-  mediaUrls: z.array(z.string().url()).optional().default([]),
+  mediaUrls: z.array(z.string()).optional().default([]),
   tags: z.array(z.string()).optional().default([]),
-  voyageId: z.string().uuid().optional(),
+  voyageId: z.string().optional(),
 });
 export const createPostSchema = CreatePostSchema;
 
@@ -140,6 +176,57 @@ export const CreateVoyageSchema = z.object({
   })).optional(),
 });
 export const createVoyageSchema = CreateVoyageSchema;
+
+export const CreateProjectJoinRequestSchema = z.object({
+  roleName: z.string().min(2, 'Role name required').max(50),
+  message: z.string().min(10, 'Message must be at least 10 characters').max(500),
+  skills: z.array(z.string()).default([]),
+});
+export const createProjectJoinRequestSchema = CreateProjectJoinRequestSchema;
+
+export const UpdateProjectJoinRequestSchema = z.object({
+  status: z.enum(['ACCEPTED', 'REJECTED']),
+});
+export const updateProjectJoinRequestSchema = UpdateProjectJoinRequestSchema;
+
+export const CreateProjectTaskSchema = z.object({
+  title: z.string().min(2, 'Task title required').max(120),
+  description: z.string().max(1000).default(''),
+  priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).default('MEDIUM'),
+  assigneeId: z.string().uuid().optional().nullable(),
+  dueDate: z.string().optional().nullable(),
+});
+export const createProjectTaskSchema = CreateProjectTaskSchema;
+
+export const UpdateProjectTaskSchema = z.object({
+  title: z.string().min(2).max(120).optional(),
+  description: z.string().max(1000).optional(),
+  status: z.enum(['TODO', 'IN_PROGRESS', 'COMPLETED']).optional(),
+  priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
+  assigneeId: z.string().uuid().optional().nullable(),
+  dueDate: z.string().optional().nullable(),
+});
+export const updateProjectTaskSchema = UpdateProjectTaskSchema;
+
+export const CreateProjectDiscussionSchema = z.object({
+  content: z.string().min(1, 'Message cannot be empty').max(2000),
+});
+export const createProjectDiscussionSchema = CreateProjectDiscussionSchema;
+
+export const CreateProjectMilestoneSchema = z.object({
+  title: z.string().min(2, 'Milestone title required').max(100),
+  description: z.string().max(500).default(''),
+  dueDate: z.string().optional().nullable(),
+});
+export const createProjectMilestoneSchema = CreateProjectMilestoneSchema;
+
+export const UpdateProjectMilestoneSchema = z.object({
+  title: z.string().min(2).max(100).optional(),
+  description: z.string().max(500).optional(),
+  isCompleted: z.boolean().optional(),
+  dueDate: z.string().optional().nullable(),
+});
+export const updateProjectMilestoneSchema = UpdateProjectMilestoneSchema;
 
 // -------------------------------------------------------------
 // CREWS (TEAMS)
@@ -187,17 +274,18 @@ export const updateTeamAgreementSchema = UpdateTeamAgreementSchema;
 // -------------------------------------------------------------
 
 export const SubmitDailyChallengeSchema = z.object({
-  challengeId: z.string().uuid(),
-  selectedOptionIndex: z.number().int().min(0).max(5),
+  challengeId: z.string().min(1),
+  selectedOptionIndex: z.number().int().min(0).max(10),
 });
 export const submitChallengeSchema = SubmitDailyChallengeSchema;
 
 export const SubmitQuizSchema = z.object({
-  quizId: z.string().uuid(),
-  timeSpentSeconds: z.number().int().min(1),
+  quizId: z.string().min(1),
+  timeSpentSeconds: z.number().int().min(0),
   answers: z.array(z.object({
-    questionId: z.string().uuid(),
-    selectedIndex: z.number().int().min(0).max(5),
+    questionId: z.string().min(1),
+    selectedOptionIndex: z.number().int().min(-1).max(10).optional(),
+    selectedIndex: z.number().int().min(-1).max(10).optional(),
   })),
 });
 export const submitQuizSchema = SubmitQuizSchema;
@@ -232,10 +320,10 @@ export const requestMentorshipSchema = RequestMentorshipSchema;
 // -------------------------------------------------------------
 
 export const SendMessageSchema = z.object({
-  conversationId: z.string().uuid(),
+  conversationId: z.string().min(1, 'Conversation ID cannot be empty'),
   content: z.string().min(1, 'Message cannot be empty').max(4000),
-  attachments: z.array(z.string().url()).optional().default([]),
-  replyToId: z.string().uuid().optional(),
+  attachments: z.array(z.string()).optional().default([]),
+  replyToId: z.string().min(1).optional(),
 });
 export const sendMessageSchema = SendMessageSchema;
 
@@ -257,3 +345,65 @@ export const CreateReportSchema = z.object({
   details: z.string().max(1000).optional(),
 });
 export const createReportSchema = CreateReportSchema;
+
+// -------------------------------------------------------------
+// CLASSROOM DIRECTORY
+// -------------------------------------------------------------
+
+export const ClaimDirectoryRecordSchema = z.object({
+  directoryId: z.string().min(1, 'Directory record ID is required'),
+  studentId: z.string().min(1, 'Student ID / USN is required'),
+});
+export const claimDirectoryRecordSchema = ClaimDirectoryRecordSchema;
+
+export const UpdateDirectoryRecordSchema = z.object({
+  originalDisplayName: z.string().min(2).max(100).optional(),
+  department: z.string().min(2).max(100).optional(),
+  notes: z.string().max(500).optional(),
+  reason: z.string().min(5, 'Audit trail reason is required for modification'),
+});
+export const updateDirectoryRecordSchema = UpdateDirectoryRecordSchema;
+
+// -------------------------------------------------------------
+// BIG DATA LAB
+// -------------------------------------------------------------
+
+export const RunBigDataJobSchema = z.object({
+  conceptId: z.enum(['concept-1', 'concept-2', 'concept-3', 'concept-4', 'concept-5', 'concept-6']),
+  jobId: z.string().min(1, 'Job ID is required'),
+  datasetName: z.string().optional(),
+  parameters: z.record(z.any()).optional(),
+});
+export const runBigDataJobSchema = RunBigDataJobSchema;
+
+// -------------------------------------------------------------
+// COMMUNITIES SCHEMAS
+// -------------------------------------------------------------
+
+export const CreateCommunitySchema = z.object({
+  name: z.string().min(3, 'Community name must be at least 3 characters').max(60),
+  description: z.string().min(10, 'Description must be at least 10 characters').max(1000),
+  category: z.string().min(2, 'Category is required'),
+  tags: z.array(z.string()).default([]),
+  avatarUrl: z.string().url().optional().or(z.literal('')),
+  bannerUrl: z.string().url().optional().or(z.literal('')),
+  isPrivate: z.boolean().default(false),
+});
+export const createCommunitySchema = CreateCommunitySchema;
+
+export const UpdateCommunitySchema = CreateCommunitySchema.partial();
+export const updateCommunitySchema = UpdateCommunitySchema;
+
+export const CommunityMembershipActionSchema = z.object({
+  action: z.enum(['JOIN', 'LEAVE', 'REQUEST']),
+});
+export const communityMembershipActionSchema = CommunityMembershipActionSchema;
+
+export const ReviewCommunityMemberSchema = z.object({
+  userId: z.string().min(1),
+  status: z.enum(['APPROVED', 'REJECTED']),
+  role: z.enum(['ADMIN', 'MODERATOR', 'MEMBER']).optional(),
+});
+export const reviewCommunityMemberSchema = ReviewCommunityMemberSchema;
+
+

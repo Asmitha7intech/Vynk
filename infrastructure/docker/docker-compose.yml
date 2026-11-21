@@ -1,0 +1,126 @@
+# VYNK Pulse — Kafka Infrastructure (KRaft mode, no Zookeeper)
+# Uses: Confluent Platform Kafka 7.6 in KRaft mode
+#
+# Usage:
+#   docker compose up -d          # Start Kafka + Kafka UI
+#   docker compose down -v        # Stop and remove volumes
+#   docker compose logs -f kafka  # Follow Kafka logs
+#
+# Topics created automatically by kafka-setup service:
+#   vynk.student-activity
+#   vynk.project-activity
+#   vynk.profile-events
+#   vynk.pipeline-errors   (Dead Letter Queue)
+
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: vynk-kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"      # External (host) access
+      - "9093:9093"      # Controller
+    environment:
+      # KRaft mode — no Zookeeper needed
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_LOG_DIRS: "/var/lib/kafka/data"
+      CLUSTER_ID: "vynk-kafka-cluster-v1"
+      # Performance tuning for batch analytics
+      KAFKA_NUM_PARTITIONS: 4
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168          # 7 days
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824     # 1 GB
+      KAFKA_LOG_RETENTION_BYTES: -1           # Unlimited (controlled by hours)
+      KAFKA_COMPRESSION_TYPE: "snappy"
+      KAFKA_MESSAGE_MAX_BYTES: 10485760       # 10 MB max message
+      # Auto topic creation disabled — we create explicitly
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      # Internal topics
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: kafka
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+    restart: unless-stopped
+
+  # Topic provisioning service — runs once and exits
+  kafka-setup:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: vynk-kafka-setup
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: |
+      bash -c "
+        echo '[SETUP] Creating VYNK Kafka topics...'
+
+        kafka-topics --bootstrap-server kafka:9092 \
+          --create --if-not-exists \
+          --topic vynk.student-activity \
+          --partitions 4 \
+          --replication-factor 1 \
+          --config retention.ms=604800000 \
+          --config compression.type=snappy
+
+        kafka-topics --bootstrap-server kafka:9092 \
+          --create --if-not-exists \
+          --topic vynk.project-activity \
+          --partitions 2 \
+          --replication-factor 1 \
+          --config retention.ms=604800000
+
+        kafka-topics --bootstrap-server kafka:9092 \
+          --create --if-not-exists \
+          --topic vynk.profile-events \
+          --partitions 2 \
+          --replication-factor 1 \
+          --config retention.ms=604800000
+
+        kafka-topics --bootstrap-server kafka:9092 \
+          --create --if-not-exists \
+          --topic vynk.pipeline-errors \
+          --partitions 1 \
+          --replication-factor 1 \
+          --config retention.ms=2592000000 \
+          --config cleanup.policy=compact
+
+        echo '[SETUP] Listing all topics:'
+        kafka-topics --bootstrap-server kafka:9092 --list
+        echo '[SETUP] Done.'
+      "
+    restart: on-failure
+
+  # Kafka UI — web dashboard at http://localhost:8080
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: vynk-kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: "vynk-local"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:9092"
+      KAFKA_CLUSTERS_0_READONLY: "false"
+    restart: unless-stopped
+
+volumes:
+  kafka-data:
+    driver: local

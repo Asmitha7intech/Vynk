@@ -11,15 +11,21 @@ export const voyageRepository = {
     orderBy: { likesCount: 'desc' },
   }),
 
-  findById: (id: string) => prisma.project.findUnique({
-    where: { id },
-    include: {
-      creator: true,
-      members: { include: { user: true } },
-      milestones: true,
-      posts: { include: { author: true } },
-    },
-  }),
+  findById: async (id: string): Promise<any> => {
+    return (prisma.project.findUnique as any)({
+      where: { id },
+      include: {
+        creator: true,
+        members: { include: { user: true } },
+        milestones: true,
+        posts: { include: { author: true } },
+        joinRequests: { include: { user: true } },
+        tasks: { include: { assignee: true } },
+        discussions: { include: { author: true } },
+        activities: true,
+      },
+    });
+  },
 
   create: (data: any) => prisma.project.create({
     data: {

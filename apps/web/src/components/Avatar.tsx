@@ -27,15 +27,33 @@ export function Avatar({ src, alt, fallback, size = 'md', isOnline, className }:
     xl: 'w-4 h-4',
   };
 
-  const initials = fallback ? fallback.split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2) : 'VK';
+  const cleanName = (fallback || alt || 'Student').trim();
+  const words = cleanName.split(/\s+/).filter(Boolean);
+  const initials = words.length >= 2
+    ? (words[0][0] + words[1][0]).toUpperCase()
+    : (cleanName.substring(0, 2) || 'ST').toUpperCase();
+
+  const [imageError, setImageError] = React.useState(false);
+
+  React.useEffect(() => {
+    setImageError(false);
+  }, [src]);
+
+  const hasValidImage = !!src && typeof src === 'string' && src.trim().length > 0 && !imageError;
 
   return (
     <div className={cn('relative inline-block flex-shrink-0', className)}>
-      <div className={cn('rounded-full overflow-hidden flex items-center justify-center bg-indigo-950/80 border border-indigo-500/30 text-indigo-200 font-medium', sizes[size])}>
-        {src ? (
-          <img src={src} alt={alt || fallback} className="w-full h-full object-cover" />
+      <div className={cn('rounded-full overflow-hidden flex items-center justify-center bg-indigo-950/80 border border-indigo-500/30 text-indigo-200 font-medium select-none', sizes[size])}>
+        {hasValidImage ? (
+          <img
+            src={src!}
+            alt={alt || fallback || 'Avatar'}
+            className="w-full h-full object-cover"
+            onError={() => setImageError(true)}
+            loading="lazy"
+          />
         ) : (
-          <span>{initials}</span>
+          <span className="tracking-wider">{initials}</span>
         )}
       </div>
       {isOnline !== undefined && (

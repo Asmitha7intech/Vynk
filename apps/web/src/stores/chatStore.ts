@@ -14,7 +14,7 @@ interface ChatState {
 }
 
 export const useChatStore = create<ChatState>((set) => ({
-  activeConversationId: 'conv-direct-maya-001',
+  activeConversationId: null,
   conversations: [],
   messages: {},
   typingUsers: {},

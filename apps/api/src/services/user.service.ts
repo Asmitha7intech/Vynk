@@ -4,7 +4,7 @@ import { prisma } from '@vynk/database';
 export const userService = {
   getById: (id: string) => userRepository.findById(id),
 
-  getByUsername: async (username: string) => {
+  getByUsername: async (username: string, currentUserId?: string) => {
     const user = await userRepository.findByUsername(username);
     if (!user) throw new Error('User not found');
 
@@ -22,10 +22,35 @@ export const userService = {
       prisma.dailyChallengeAttempt.count({ where: { userId: user.id } }),
     ]);
 
+    let connectionStatus: 'CONNECTED' | 'PENDING' | 'RECEIVED' | 'NONE' = 'NONE';
+    let connectionId: string | null = null;
+
+    if (currentUserId && currentUserId !== user.id) {
+      const conn = await prisma.connection.findFirst({
+        where: {
+          OR: [
+            { senderId: currentUserId, receiverId: user.id },
+            { senderId: user.id, receiverId: currentUserId },
+          ],
+        },
+      });
+
+      if (conn) {
+        connectionId = conn.id;
+        if (conn.status === 'ACCEPTED') {
+          connectionStatus = 'CONNECTED';
+        } else if (conn.status === 'PENDING') {
+          connectionStatus = conn.senderId === currentUserId ? 'PENDING' : 'RECEIVED';
+        }
+      }
+    }
+
     return {
       user,
       skills: user.skills,
       interests: user.interests,
+      connectionStatus,
+      connectionId,
       stats: {
         vynksCount,
         followersCount,
@@ -43,5 +68,5 @@ export const userService = {
 
   addSkill: (userId: string, skill: any) => userRepository.addSkill(userId, skill),
 
-  search: (query: string) => userRepository.search(query),
+  search: (query: string, limit = 50) => userRepository.search(query, limit),
 };

@@ -19,12 +19,12 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   // Form State
   const [headline, setHeadline] = useState(user?.headline || '');
   const [bio, setBio] = useState(user?.bio || '');
-  const [college, setCollege] = useState(user?.college || 'MIT');
+  const [college, setCollege] = useState(user?.college || 'CIT');
   const [department, setDepartment] = useState(user?.department || 'Computer Science');
   const [graduationYear, setGraduationYear] = useState(user?.graduationYear || 2026);
   const [currentlyBuilding, setCurrentlyBuilding] = useState('');
-  const [lookingFor, setLookingFor] = useState('Hackathon Teammates');
-  const [availableFor, setAvailableFor] = useState('10 hrs/week • Evenings & Weekends');
+  const [lookingFor, setLookingFor] = useState('');
+  const [availableFor, setAvailableFor] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [portfolioUrl, setPortfolioUrl] = useState('');
@@ -63,20 +63,21 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     } else {
       setIsSubmitting(true);
       try {
-        const updatePayload = {
-          headline: headline || 'Student Builder • Exploring the Frontier',
-          bio: bio || 'Building open source projects, competing in hackathons, and learning modern architectures.',
-          college,
-          department,
-          graduationYear: Number(graduationYear),
-          currentlyBuilding: currentlyBuilding || 'Neural Network visualization tool',
-          lookingFor: lookingFor || 'Full-stack & ML collaborators',
-          availableFor: availableFor || 'Hackathons and weekend builds',
-          githubUrl: githubUrl || undefined,
-          linkedinUrl: linkedinUrl || undefined,
-          portfolioUrl: portfolioUrl || undefined,
+        const updatePayload: Record<string, any> = {
+          college: college.trim() || 'CIT',
+          department: department.trim() || 'Computer Science',
+          graduationYear: Number(graduationYear) || 2026,
           isAvailableForCrews: true,
         };
+
+        if (headline.trim()) updatePayload.headline = headline.trim();
+        if (bio.trim()) updatePayload.bio = bio.trim();
+        if (currentlyBuilding.trim()) updatePayload.currentlyBuilding = currentlyBuilding.trim();
+        if (lookingFor.trim()) updatePayload.lookingFor = lookingFor.trim();
+        if (availableFor.trim()) updatePayload.availableFor = availableFor.trim();
+        if (githubUrl.trim()) updatePayload.githubUrl = githubUrl.trim();
+        if (linkedinUrl.trim()) updatePayload.linkedinUrl = linkedinUrl.trim();
+        if (portfolioUrl.trim()) updatePayload.portfolioUrl = portfolioUrl.trim();
 
         const updated = await api.updateProfile(updatePayload);
         if (updated) {
@@ -137,13 +138,19 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               />
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">Bio & What drives you</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-foreground">Bio & What drives you</label>
+                  <span className={`text-[10px] font-mono ${bio.length > 450 ? 'text-amber-400 font-bold' : 'text-muted-foreground'}`}>
+                    {bio.length}/500
+                  </span>
+                </div>
                 <textarea
                   value={bio}
-                  onChange={(e) => setBio(e.target.value)}
+                  onChange={(e) => setBio(e.target.value.slice(0, 500))}
                   placeholder="Passionate about building distributed systems and agentic AI. Looking for teammates for upcoming hackathons."
                   rows={3}
-                  className="w-full px-3.5 py-2.5 bg-muted/40 border border-border rounded-xl text-xs placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 text-foreground resize-none"
+                  maxLength={500}
+                  className="w-full px-3.5 py-2.5 bg-[#090d16] border border-white/10 rounded-xl text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/40 resize-none transition-all shadow-inner"
                 />
               </div>
             </div>

@@ -2,8 +2,12 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { userService } from '../services/user.service';
 import { crossDepartmentService } from '../services/cross-department.service';
 import { updateProfileSchema, addSkillSchema } from '@vynk/validation';
+import { getOnlineUserIds } from '../realtime/socket';
 
 export async function usersController(fastify: FastifyInstance) {
+  fastify.get('/presence', async (request: FastifyRequest, reply: FastifyReply) => {
+    return reply.send({ success: true, data: { onlineUserIds: getOnlineUserIds() } });
+  });
 
   fastify.get('/cross-department', { preHandler: [(fastify as any).authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.userPayload!.userId;
@@ -11,14 +15,23 @@ export async function usersController(fastify: FastifyInstance) {
     return reply.send({ success: true, data: matches });
   });
 
-  fastify.get('/search', async (request: FastifyRequest<{ Querystring: { q?: string } }>, reply: FastifyReply) => {
+  fastify.get('/search', async (request: FastifyRequest<{ Querystring: { q?: string; limit?: string } }>, reply: FastifyReply) => {
     const query = request.query.q || '';
-    const users = await userService.search(query);
+    const limit = parseInt(request.query.limit || '50', 10);
+    const users = await userService.search(query, limit);
     return reply.send({ success: true, data: users });
   });
 
   fastify.get('/:username', async (request: FastifyRequest<{ Params: { username: string } }>, reply: FastifyReply) => {
-    const summary = await userService.getByUsername(request.params.username);
+    let currentUserId: string | undefined;
+    const authHeader = request.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const decoded: any = fastify.jwt.verify(authHeader.substring(7));
+        currentUserId = decoded.userId;
+      } catch {}
+    }
+    const summary = await userService.getByUsername(request.params.username, currentUserId);
     return reply.send({ success: true, data: summary });
   });
 

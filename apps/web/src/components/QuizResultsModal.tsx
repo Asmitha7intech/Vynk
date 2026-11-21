@@ -69,6 +69,49 @@ export function QuizResultsModal({ isOpen, onClose, results, quizTitle }: QuizRe
           </div>
         )}
 
+        {/* Question-by-Question Detailed Review & Explanations */}
+        {results.feedback && results.feedback.length > 0 && (
+          <div className="text-left space-y-3 pt-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-indigo-400" />
+              Question Breakdown & Authoritative Explanations
+            </h4>
+            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+              {results.feedback.map((item: any, idx: number) => (
+                <div
+                  key={item.questionId || idx}
+                  className={`p-3 rounded-2xl border text-xs space-y-2 ${
+                    item.isCorrect
+                      ? 'bg-emerald-500/5 border-emerald-500/20'
+                      : 'bg-rose-500/5 border-rose-500/20'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-bold text-foreground">
+                      {idx + 1}. {item.question}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold shrink-0 ${
+                        item.isCorrect
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-rose-500/20 text-rose-400'
+                      }`}
+                    >
+                      {item.isCorrect ? 'Correct' : 'Incorrect'}
+                    </span>
+                  </div>
+                  {item.explanation && (
+                    <p className="text-[11px] text-muted-foreground leading-relaxed bg-black/20 p-2 rounded-xl">
+                      <strong className="text-indigo-300">Why: </strong>
+                      {item.explanation}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <Button onClick={onClose} className="w-full">
           Return to Arena
         </Button>

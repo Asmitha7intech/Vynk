@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Users, ExternalLink, Sparkles, Plus } from 'lucide-react';
-import { Card } from '../components/Card';
-import { Badge } from '../components/Badge';
-import { Button } from '../components/Button';
+import { Calendar, MapPin, Users, ExternalLink, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Pill } from '../components/vynk/Pill';
+import { VynkButton } from '../components/vynk/VynkButton';
+import { EmptyState } from '../components/vynk/EmptyState';
 import { api } from '../lib/api';
 import { EventItem } from '@vynk/types';
 
@@ -36,22 +36,26 @@ export function EventsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Hero */}
-      <div className="p-6 rounded-3xl bg-gradient-to-r from-rose-950/50 via-card to-card border border-rose-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-black uppercase tracking-wider">
-              Hackathons & Campus Meetups
-            </span>
+      {/* ── Hero Header ── */}
+      <div className="p-6 sm:p-7 rounded-3xl glass-card space-y-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Pill label="Hackathons & Summits" variant="rose" size="xs" />
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+              Campus Opportunities & Hackathons
+            </h1>
+            <p className="text-xs text-muted-foreground max-w-lg leading-relaxed">
+              Discover verified hackathons, campus developer summits, engineering workshops, and startup demo days.
+            </p>
           </div>
-          <h1 className="text-2xl font-black tracking-tight">Opportunities Arena</h1>
-          <p className="text-xs text-muted-foreground max-w-lg">
-            Discover verified hackathons, campus developer summits, engineering workshops, and startup demo days.
-          </p>
         </div>
       </div>
 
-      {/* Filters */}
+      {/* ── Filters ── */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {['ALL', 'HACKATHON', 'WORKSHOP', 'MEETUP', 'COMPETITION'].map((cat) => (
           <button
@@ -59,8 +63,8 @@ export function EventsPage() {
             onClick={() => setFilter(cat)}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap ${
               filter === cat
-                ? 'bg-rose-500/10 border-rose-500 text-rose-400 font-bold'
-                : 'bg-muted/40 border-border text-muted-foreground hover:text-foreground'
+                ? 'bg-rose-500/15 border-rose-500/30 text-rose-300 font-bold shadow-sm'
+                : 'bg-white/5 border-white/5 text-muted-foreground hover:text-foreground hover:bg-white/10'
             }`}
           >
             {cat}
@@ -68,33 +72,35 @@ export function EventsPage() {
         ))}
       </div>
 
-      {/* Grid */}
+      {/* ── Events Grid ── */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[1, 2].map((i) => (
-            <div key={i} className="p-6 rounded-2xl bg-card border border-border/60 animate-pulse space-y-3">
-              <div className="h-4 w-32 bg-muted/60 rounded" />
-              <div className="h-3 w-full bg-muted/40 rounded" />
+            <div key={i} className="p-6 rounded-3xl glass-card animate-pulse space-y-3">
+              <div className="h-4 w-32 bg-white/5 rounded" />
+              <div className="h-3 w-full bg-white/5 rounded" />
+              <div className="h-16 w-full bg-white/5 rounded-2xl" />
             </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="p-12 text-center bg-card rounded-2xl border border-border space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 mx-auto flex items-center justify-center">
-            <Calendar className="w-6 h-6" />
-          </div>
-          <h3 className="text-sm font-bold text-foreground">No events found in this category</h3>
-          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-            Check other event categories or create an official campus meetup dispatch.
-          </p>
-        </div>
+        <EmptyState
+          icon={Calendar}
+          title="No events found in this category"
+          description="Check other event categories or create an official campus meetup dispatch."
+          actionLabel="View All Opportunities"
+          onAction={() => setFilter('ALL')}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filtered.map((event) => (
-            <Card key={event.id} className="p-5 flex flex-col justify-between space-y-4 border-border/80 hover:border-rose-500/30 transition-all">
+            <div
+              key={event.id}
+              className="p-5 rounded-3xl glass-card border-white/5 hover:border-rose-500/30 transition-all flex flex-col justify-between space-y-4"
+            >
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Badge variant="accent" className="text-[10px]">{event.category}</Badge>
+                  <Pill label={event.category} variant="rose" size="xs" />
                   <span className="text-[11px] font-mono text-muted-foreground">
                     {new Date(event.startsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
@@ -112,17 +118,24 @@ export function EventsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-border/60">
-                <span className="text-[11px] text-muted-foreground">Organizer: <strong>{event.organizer}</strong></span>
+              <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                <span className="text-[11px] text-muted-foreground">
+                  By <strong>{event.organizer}</strong>
+                </span>
+
                 {event.isRegisteredByMe ? (
-                  <Badge variant="default" className="text-[10px]">Registered ✓</Badge>
+                  <Pill label="Registered ✓" variant="emerald" size="xs" />
                 ) : (
-                  <Button size="sm" onClick={() => handleRegister(event.id)} className="text-xs">
+                  <VynkButton
+                    size="xs"
+                    variant="outline"
+                    onClick={() => handleRegister(event.id)}
+                  >
                     Register Now
-                  </Button>
+                  </VynkButton>
                 )}
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       )}

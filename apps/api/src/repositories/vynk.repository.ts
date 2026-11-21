@@ -1,6 +1,11 @@
 import { prisma, VynkStatus } from '@vynk/database';
 
 export const vynkRepository = {
+  findConnectionById: (id: string) => prisma.connection.findUnique({
+    where: { id },
+    include: { sender: true, receiver: true },
+  }),
+
   findConnection: (userAId: string, userBId: string) => prisma.connection.findFirst({
     where: {
       OR: [
@@ -48,6 +53,20 @@ export const vynkRepository = {
     include: {
       sender: { include: { skills: true, interests: true } },
     },
+  }),
+
+  listOutgoingPendingRequests: (userId: string) => prisma.connection.findMany({
+    where: {
+      senderId: userId,
+      status: VynkStatus.PENDING,
+    },
+    include: {
+      receiver: { include: { skills: true, interests: true } },
+    },
+  }),
+
+  deleteConnection: (id: string) => prisma.connection.delete({
+    where: { id },
   }),
 
   follow: (followerId: string, followingId: string) => prisma.follow.create({

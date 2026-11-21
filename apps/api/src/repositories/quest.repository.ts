@@ -5,6 +5,14 @@ export const questRepository = {
     where: { activeDate: dateStr },
   }),
 
+  getLatestChallenge: () => prisma.dailyChallenge.findFirst({
+    orderBy: { createdAt: 'desc' },
+  }),
+
+  getChallengeById: (id: string) => prisma.dailyChallenge.findUnique({
+    where: { id },
+  }),
+
   getChallengeAttempt: (challengeId: string, userId: string) => prisma.dailyChallengeAttempt.findUnique({
     where: {
       challengeId_userId: { challengeId, userId },
@@ -15,16 +23,8 @@ export const questRepository = {
     prisma.dailyChallengeAttempt.create({ data }),
 
   listQuizzes: () => prisma.quiz.findMany({
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      description: true,
-      category: true,
-      difficulty: true,
-      timeLimitMinutes: true,
-      xpReward: true,
-      isWeeklySpecial: true,
+    include: {
+      questions: true,
       _count: { select: { questions: true } },
     },
     orderBy: { createdAt: 'desc' },

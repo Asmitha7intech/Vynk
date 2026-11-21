@@ -145,8 +145,20 @@ model User {
   analyticsEvents         AnalyticsEvent[]
   eventRegistrations      EventRegistration[]
   communityMemberships    CommunityMember[]
+  createdCommunities      Community[]  @relation("CreatedCommunities")
+  sessions                Session[]
+  passwordResetTokens     PasswordResetToken[]
+  projectJoinRequests     ProjectJoinRequest[]
+  assignedTasks           ProjectTask[]
+  projectDiscussions      ProjectDiscussion[]
   searchHistories         SearchHistory[]
   studentVerification     StudentVerification?
+  recommendationFeedbacks RecommendationFeedback[]
+  blocksInitiated         Block[]      @relation("Blocker")
+  blocksReceived          Block[]      @relation("Blocked")
+  auditLogs               AuditLog[]
+  emailVerificationTokens EmailVerificationToken[]
+  notificationPreference  NotificationPreference?
 
   @@index([username])
   @@index([email])
@@ -219,6 +231,8 @@ model Post {
   tags          String[]    @default([])
   voyageId      String?
   voyage        Project?    @relation(fields: [voyageId], references: [id], onDelete: SetNull)
+  communityId   String?
+  community     Community?  @relation(fields: [communityId], references: [id], onDelete: SetNull)
   likesCount    Int         @default(0)
   commentsCount Int         @default(0)
   sharesCount   Int         @default(0)
@@ -303,6 +317,10 @@ model Project {
 
   members       ProjectMember[]
   milestones    ProjectMilestone[]
+  joinRequests  ProjectJoinRequest[]
+  tasks         ProjectTask[]
+  discussions   ProjectDiscussion[]
+  activities    ProjectActivity[]
   posts         Post[]
 
   @@index([creatorId])
@@ -707,10 +725,20 @@ model Community {
   slug        String   @unique
   description String
   avatarUrl   String?
+  bannerUrl   String?
   category    String
+  tags        String[] @default([])
+  creatorId   String?
+  creator     User?    @relation("CreatedCommunities", fields: [creatorId], references: [id], onDelete: SetNull)
+  isPrivate   Boolean  @default(false)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   members     CommunityMember[]
+  posts       Post[]
+
+  @@index([category])
+  @@index([createdAt(sort: Desc)])
 }
 
 model CommunityMember {
@@ -719,9 +747,13 @@ model CommunityMember {
   community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        String    @default("MEMBER") // ADMIN | MODERATOR | MEMBER
+  status      String    @default("APPROVED") // PENDING | APPROVED | REJECTED
   joinedAt    DateTime  @default(now())
 
   @@unique([communityId, userId])
+  @@index([userId])
+  @@index([communityId, status])
 }
 
 // -------------------------------------------------------------
@@ -816,3 +848,253 @@ model Department {
   @@unique([institutionId, code])
   @@index([institutionId])
 }
+
+model EventOutbox {
+  id           String    @id @default(uuid())
+  eventId      String    @unique
+  eventType    String
+  topic        String
+  partitionKey String?
+  payload      String    @db.Text
+  status       String    @default("PENDING") // PENDING | PUBLISHED | FAILED | DEAD_LETTER
+  retryCount   Int       @default(0)
+  lastError    String?   @db.Text
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  publishedAt  DateTime?
+
+  @@index([status, createdAt])
+  @@index([eventType])
+}
+
+model RecommendationFeedback {
+  id                 String   @id @default(uuid())
+  userId             String
+  recommendationType String   // CREW | COLLABORATOR | QUEST | POST | VOYAGE
+  targetId           String
+  action             String   // CLICK | ACCEPT | DISMISS | SAVE
+  context            String?  @db.Text
+  createdAt          DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, recommendationType])
+  @@index([targetId])
+  @@index([action])
+}
+
+model ClassroomDirectory {
+  id                      String    @id @default(uuid())
+  studentId               String    @unique
+  originalDisplayName     String
+  normalizedName          String
+  department              String
+  cohort                  String    @default("Batch 2026")
+  graduationYear          Int       @default(2026)
+  isClaimed               Boolean   @default(false)
+  claimedUserId           String?   @unique
+  claimedAt               DateTime?
+  claimVerificationMethod String?
+  notes                   String?
+  auditTrail              String    @default("[]") // JSON string of audit trail
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@index([normalizedName])
+  @@index([isClaimed])
+  @@index([department])
+}
+
+model BigDataJob {
+  id               String    @id @default(uuid())
+  conceptId        String    // concept-1, concept-2, ...
+  title            String
+  datasetName      String
+  status           String    @default("QUEUED") // QUEUED | RUNNING | SUCCEEDED | FAILED | CANCELLED
+  startTime        DateTime  @default(now())
+  endTime          DateTime?
+  durationMs       Int       @default(0)
+  inputPath        String
+  outputPath       String
+  inputRowCount    Int       @default(0)
+  outputRowCount   Int       @default(0)
+  rejectedRowCount Int       @default(0)
+  executionMode    String    @default("LOCAL_FALLBACK")
+  logs             String    @default("[]") // JSON string array of log messages
+  errorSummary     String?   @db.Text
+  outputPreview    String    @default("{}") // JSON string of preview
+  metrics          String    @default("{}") // JSON string of metrics
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([conceptId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// -------------------------------------------------------------
+// SESSIONS & SECURITY
+// -------------------------------------------------------------
+
+model Session {
+  id               String    @id @default(uuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent        String?
+  ipAddress        String?
+  refreshTokenHash String?
+  familyId         String?
+  isRevoked        Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([familyId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
+
+// -------------------------------------------------------------
+// PROJECT COLLABORATION & JOIN REQUESTS
+// -------------------------------------------------------------
+
+model ProjectJoinRequest {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleName  String
+  message   String
+  skills    String[] @default([])
+  status    String   @default("PENDING") // PENDING | ACCEPTED | REJECTED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, status])
+  @@index([userId])
+}
+
+model ProjectTask {
+  id          String    @id @default(uuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  assignedTo  String?
+  assignee    User?     @relation(fields: [assignedTo], references: [id], onDelete: SetNull)
+  status      String    @default("TODO") // TODO | IN_PROGRESS | DONE
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([assignedTo])
+}
+
+model ProjectDiscussion {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([authorId])
+}
+
+model ProjectActivity {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  userName  String
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([userId])
+}
+
+// -------------------------------------------------------------
+// SAFETY, MODERATION & USER PREFERENCES
+// -------------------------------------------------------------
+
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model NotificationPreference {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailNotifs  Boolean  @default(true)
+  pushNotifs   Boolean  @default(true)
+  vynkRequests Boolean  @default(true)
+  messages     Boolean  @default(true)
+  mentions     Boolean  @default(true)
+  crewInvites  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+
+
+

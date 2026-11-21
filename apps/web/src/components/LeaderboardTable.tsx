@@ -19,7 +19,7 @@ export function LeaderboardTable({ entries }: LeaderboardTableProps) {
   if (entries.length === 0) {
     return (
       <div className="p-12 text-center text-xs text-muted-foreground bg-card rounded-2xl border border-border">
-        No leaderboard rankings recorded for this scope yet. Ship Voyages & solve daily Quests to rank #1!
+        No eligible activity recorded yet.
       </div>
     );
   }

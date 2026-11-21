@@ -8,6 +8,16 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('FATAL: Database seed script cannot execute in production environment.');
+  }
+
+  if (process.env.ALLOW_DB_RESET !== 'true') {
+    console.warn('⚠️ Seed aborted: ALLOW_DB_RESET=true is required to execute seed script and wipe data.');
+    console.warn('This protects real student accounts and production data from accidental deletion.');
+    return;
+  }
+
   console.log('🌱 Starting VYNK database seed...');
 
   // Clean existing tables in reverse dependency order
