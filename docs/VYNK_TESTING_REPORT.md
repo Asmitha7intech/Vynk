@@ -48,6 +48,38 @@ Result: **18/18 Test Files PASSED, 157/157 Tests PASSED (Duration: 38.74s)**
 | 16 | **Cross-Department Collaboration**| `test/cross-department.service.test.ts` | 2 | **PASS** | Departmental diversity scoring for hackathon squads |
 | 17 | **Quest Service Suite** | `test/quest.service.test.ts` | 2 | **PASS** | Daily technical challenge rotation, answer validation |
 | 18 | **Big Data Intelligence Service** | `test/bigdata.service.test.ts` | 2 | **PASS** | Telemetry aggregations, campus resource analytics |
+| 19 | **Unauthenticated Route Protection** | `test/unauthenticated_route_protection.test.ts` | 18 | **PASS** | 401 Unauthorized guaranteed across all 18 protected endpoint groups |
+
+---
+
+## 2.1 Section 10 Real Browser & Multi-Viewport Playwright E2E Suite
+
+Command: `node scripts/run-e2e-browser-test.js` / `npx playwright test`  
+Runner: Playwright v1.65.1 (Chromium)  
+Viewports Tested: Desktop Chrome (1440x900), Mobile iPhone (390x844)  
+Result: **100% PASS — All 12 Verified Screenshots Captured**
+
+### Two-Student Live Collaboration Workflow Tested:
+1. **Student A (Aarav Patel)** signs up with institution, 16+ DOB age gate, min 10-char password.
+2. **Student B (Diya Sharma)** signs up on mobile viewport (390x844).
+3. **Student A** starts and showcases Voyage "AeroVision AI".
+4. **Student B** explores campus network, sends mutual connection request to Student A.
+5. **Student A** accepts connection request in Realtime.
+6. **Direct Messaging** unlocked between mutually connected students; real-time messaging verified.
+
+### Screenshot Artifacts (`docs/screenshots/final/`):
+- `01_auth_signin_desktop.png` (134 kB)
+- `01_auth_signin_mobile.png` (174 kB)
+- `02_home_feed_desktop.png` (407 kB)
+- `02_home_feed_mobile.png` (756 kB)
+- `03_communities_desktop.png` (300 kB)
+- `03_communities_mobile.png` (309 kB)
+- `04_voyages_gallery_desktop.png` (306 kB)
+- `04_voyages_gallery_mobile.png` (362 kB)
+- `05_network_people_sphere_desktop.png` (359 kB)
+- `05_network_people_sphere_mobile.png` (599 kB)
+- `06_messaging_direct_desktop.png` (150 kB)
+- `06_messaging_direct_mobile.png` (202 kB)
 
 ---
 

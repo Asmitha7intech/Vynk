@@ -162,5 +162,26 @@ Compliance frameworks drafted and established under `docs/legal/`:
 | `test/vynk_quests_bio_cit.test.ts` | 12 | **PASS** | 1.45s |
 | `test/vynk_profile_networking_messaging.test.ts` | 7 | **PASS** | 1.10s |
 | `test/vynk5_auth_collaboration.test.ts` | 10 | **PASS** | 0.95s |
+| `test/unauthenticated_route_protection.test.ts` | 18 | **PASS** | 0.50s |
 | Other Unit Tests (Matching, BigData, Quests, Gamification, Cross-Dept) | 10 | **PASS** | 0.08s |
-| **Total API Test Suite** | **139** | **ALL PASS** | **16.03s** |
+| **Total API Test Suite** | **177** | **ALL PASS** | **107.47s** |
+
+---
+
+## 11. Section 1 & 2 Security Additions (Master Directive)
+
+1. **Single Owner Constraint:**
+   - Exactly ONE SuperAdmin account (`asmitha7intech@gmail.com`) provisioned in database.
+   - All secondary and legacy test admins (`ash@citchennai.net`, `admin@citchennai.net`) permanently deleted.
+   - Initial provisioned state enforced: `mustChangePassword: true`, `xp: 0`, `level: 1`, 0 badges.
+   - Forced redirection to `/change-password` on frontend until a permanent password is set.
+
+2. **Sign-In First Gate & Protected Routes:**
+   - Unauthenticated visitors cannot access feed, communities, messages, voyages, network, or profile.
+   - Strict 401 Unauthorized guaranteed across all 18 protected API endpoint groups.
+   - DOB minimum age gate (16+) enforced during student registration.
+
+3. **Storage & Database Test Isolation:**
+   - Dev database persists in embedded PGlite at `data/pglite_dev/store.json`.
+   - Test runs automatically switch PGlite to in-memory mode, preventing test pollution.
+   - Test uploads write strictly to `data/test_uploads/`, keeping `data/uploads/` 100% clean.
