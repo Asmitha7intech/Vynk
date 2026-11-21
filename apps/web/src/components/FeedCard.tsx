@@ -18,7 +18,7 @@ import { Avatar } from './Avatar';
 import { Pill } from './vynk/Pill';
 import { VynkButton } from './vynk/VynkButton';
 import { Post } from '@vynk/types';
-import { formatTimeAgo } from '../lib/utils';
+import { formatTimeAgo, getProfileUrl } from '../lib/utils';
 import { api } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
@@ -207,12 +207,12 @@ export function FeedCard({ post, initialShowComments = false }: FeedCardProps) {
       {/* Author Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <Link to={`/profile/${post.author.username}`} className="shrink-0">
+          <Link to={getProfileUrl(post.author)} className="shrink-0">
             <Avatar src={post.author.avatarUrl} fallback={post.author.displayName} size="md" isOnline={true} />
           </Link>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <Link to={`/profile/${post.author.username}`} className="text-sm font-bold text-foreground hover:text-indigo-400 hover:underline truncate">
+              <Link to={getProfileUrl(post.author)} className="text-sm font-bold text-foreground hover:text-indigo-400 hover:underline truncate">
                 {post.author.displayName}
               </Link>
               <span className="text-xs text-muted-foreground truncate font-mono">@{post.author.username}</span>
@@ -405,10 +405,10 @@ export function FeedCard({ post, initialShowComments = false }: FeedCardProps) {
                 <div key={c.id} className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 text-xs space-y-1.5 group">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Link to={`/profile/${c.author?.username}`}>
+                      <Link to={getProfileUrl(c.author)}>
                         <Avatar src={c.author?.avatarUrl} fallback={c.author?.displayName} size="xs" />
                       </Link>
-                      <Link to={`/profile/${c.author?.username}`} className="font-bold text-foreground hover:underline">
+                      <Link to={getProfileUrl(c.author)} className="font-bold text-foreground hover:underline">
                         {c.author?.displayName || 'Builder'}
                       </Link>
                       <span className="text-[10px] text-muted-foreground">

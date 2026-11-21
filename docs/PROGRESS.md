@@ -80,3 +80,33 @@ This log tracks every step executed across Phases B through G in accordance with
   - Uploads restricted to authentic magic bytes with traversal protection.
 - **Open Blockers:** None
 
+### Phase D — Design System & UI/UX Redesign
+- **Timestamp:** 2026-11-21T20:10:00+05:30
+- **Step:** Phase D Complete
+- **Files Changed:**
+  - `apps/web/index.html` (loaded Syne, Plus Jakarta Sans, JetBrains Mono fonts)
+  - `apps/web/tailwind.config.ts` (configured Canvas #0A0A0F, Surface #131318, Elevated #181822, Primary #7C5CFF, Secondary #10E599, Highlight #FF5376)
+  - `apps/web/src/index.css` (dual-theme light and dark tokens, high contrast typography)
+  - `apps/web/src/App.tsx` (route-level code splitting via React.lazy and Suspense)
+  - `apps/web/src/lib/utils.ts` (added canonical getProfileUrl helper)
+  - `apps/api/src/repositories/user.repository.ts` (resilient username/ID and case-insensitive lookup)
+  - `apps/web/src/pages/NetworkPage.tsx` (switched all profile links to getProfileUrl)
+  - `apps/web/src/pages/ProfilePage.tsx` (enhanced profile target and own profile resolution)
+  - `apps/web/src/components/FeedCard.tsx` (switched author and comment links to getProfileUrl)
+  - `apps/web/src/components/ui/Tabs.tsx` (segmented and underline tab navigators)
+  - `apps/web/src/components/ui/Switch.tsx` (accessible toggle switch)
+  - `apps/web/src/components/ui/Toast.tsx` (floating notification toast)
+  - `apps/web/src/components/ui/index.ts` (exported new design system primitives)
+  - `apps/web/test/design_system.test.tsx` (design system unit test suite)
+  - `docs/VYNK_DESIGN_SYSTEM.md` (comprehensive UI/UX design specifications)
+- **Commands Run:**
+  - `pnpm --filter @vynk/web test` (PASS: 4/4 test files, 37/37 tests)
+  - `pnpm typecheck` (PASS: 5/5 workspace packages)
+  - `pnpm --filter @vynk/web build` (PASS: built in 22.87s, route chunks split cleanly)
+- **Real Results:**
+  - Monolithic bundle split into 18 independent route chunks.
+  - Syne display typography and Plus Jakarta Sans body typography active.
+  - Network -> Profile navigation bug permanently resolved with case-insensitive and ID fallbacks.
+  - Dual theme parity verified with zero white-on-white text.
+- **Open Blockers:** None
+

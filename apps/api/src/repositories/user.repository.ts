@@ -20,17 +20,53 @@ export const userRepository = {
     });
   },
 
-  findByUsername: async (username: string) => {
-    return prisma.user.findUnique({
-      where: { username },
-      include: {
-        skills: true,
-        interests: true,
-        badges: {
-          include: { badge: true },
-        },
+  findByUsername: async (identifier: string) => {
+    const include = {
+      skills: true,
+      interests: true,
+      badges: {
+        include: { badge: true },
       },
+    };
+
+    // 1. Direct exact username match
+    let user = await prisma.user.findUnique({
+      where: { username: identifier },
+      include,
     });
+    if (user) return user;
+
+    // 2. Direct ID match (for routing via /profile/:id)
+    try {
+      user = await prisma.user.findUnique({
+        where: { id: identifier },
+        include,
+      });
+      if (user) return user;
+    } catch {}
+
+    // 3. Case-insensitive username match
+    try {
+      user = await prisma.user.findFirst({
+        where: {
+          username: {
+            equals: identifier,
+            mode: 'insensitive',
+          },
+        },
+        include,
+      });
+      if (user) return user;
+    } catch {}
+
+    // 4. In-memory fallback for localStore if case-insensitive query mode isn't supported
+    const allUsers = await prisma.user.findMany({ include });
+    const target = allUsers.find(
+      (u) =>
+        u.username?.toLowerCase() === identifier.toLowerCase() ||
+        u.id === identifier
+    );
+    return target || null;
   },
 
   search: async (query: string, limit = 20) => {

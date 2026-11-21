@@ -5,17 +5,18 @@
 @layer base {
   :root {
     color-scheme: light;
-    --background: #f8fafc;
-    --foreground: #0f172a;
+    --background: #f8f9fc;
+    --canvas: #f8f9fc;
+    --foreground: #0f111a;
     --surface: #ffffff;
-    --surface-elevated: #ffffff;
-    --surface-floating: #f1f5f9;
-    --surface-border: #e2e8f0;
+    --surface-elevated: #f1f3f9;
+    --surface-floating: #eef1f8;
+    --surface-border: #e2e5ee;
     --card: #ffffff;
-    --card-foreground: #0f172a;
-    --muted: #f1f5f9;
-    --muted-foreground: #64748b;
-    --border: #e2e8f0;
+    --card-foreground: #0f111a;
+    --muted: #f1f3f9;
+    --muted-foreground: #656b82;
+    --border: #e2e5ee;
 
     --neon-cyan: #0284c7;
     --neon-violet: #7c3aed;
@@ -25,22 +26,28 @@
 
   .dark {
     color-scheme: dark;
-    --background: #000000;
-    --foreground: #ffffff;
-    --surface: #050505;
-    --surface-elevated: #0a0a0a;
-    --surface-floating: #111111;
-    --surface-border: rgba(255, 255, 255, 0.08);
-    --card: #050505;
-    --card-foreground: #ffffff;
-    --muted: #111111;
-    --muted-foreground: #71717a;
-    --border: rgba(255, 255, 255, 0.08);
+    --background: #0A0A0F;
+    --canvas: #0A0A0F;
+    --foreground: #F4F4F6;
+    --surface: #131318;
+    --surface-elevated: #181822;
+    --surface-floating: #20202C;
+    --surface-border: #232330;
+    --card: #131318;
+    --card-foreground: #F4F4F6;
+    --muted: #181822;
+    --muted-foreground: #8B8B9E;
+    --border: #232330;
 
     --neon-cyan: #00F0FF;
     --neon-violet: #8B5CF6;
     --neon-magenta: #FF2E93;
     --neon-emerald: #10B981;
+  }
+
+  /* Headings use Syne font */
+  h1, h2, h3, .font-display {
+    font-family: 'Syne', sans-serif;
   }
 
   /* Form control defaults with proper theme support */

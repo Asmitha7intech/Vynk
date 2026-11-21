@@ -5,6 +5,21 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Generates a canonical, safe profile navigation URL for any user.
+ * Prioritizes username, falling back to ID if username is missing.
+ */
+export function getProfileUrl(user?: { username?: string; id?: string } | null): string {
+  if (!user) return '/profile';
+  if (user.username && user.username.trim().length > 0) {
+    return `/profile/${encodeURIComponent(user.username.trim())}`;
+  }
+  if (user.id && user.id.trim().length > 0) {
+    return `/profile/${encodeURIComponent(user.id.trim())}`;
+  }
+  return '/profile';
+}
+
 export function formatTimeAgo(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();

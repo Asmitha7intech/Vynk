@@ -32,6 +32,7 @@ import { SphereImageGrid, SphereStudentItem } from '../components/ui/img-sphere'
 import { VynkPeopleSphere, StudentUser } from '../components/vynk/VynkPeopleSphere';
 import { SkillBadge } from '../components/vynk/SkillBadge';
 import { api } from '../lib/api';
+import { getProfileUrl } from '../lib/utils';
 import { User } from '@vynk/types';
 
 import { useAuthStore } from '../stores/authStore';
@@ -682,7 +683,7 @@ export function NetworkPage() {
                           />
                           <div className="min-w-0 flex-1 space-y-1">
                             <Link
-                              to={`/profile/${student.username}`}
+                              to={getProfileUrl(student)}
                               className="text-sm font-bold text-foreground hover:text-indigo-400 transition-colors truncate block"
                             >
                               {student.displayName}
@@ -731,7 +732,7 @@ export function NetworkPage() {
                         {/* Card Actions */}
                         <div className="pt-2 border-t border-white/5 flex items-center gap-2">
                           <Link
-                            to={`/profile/${student.username}`}
+                            to={getProfileUrl(student)}
                             className="flex-1"
                           >
                             <VynkButton size="xs" variant="outline" className="w-full">
@@ -843,7 +844,7 @@ export function NetworkPage() {
 
                       <div className="space-y-1.5 min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Link to={`/profile/${u.username}`} className="text-sm font-bold text-foreground hover:underline truncate">
+                          <Link to={getProfileUrl(u)} className="text-sm font-bold text-foreground hover:underline truncate">
                             {u.displayName}
                           </Link>
                           <span className="text-xs text-muted-foreground">@{u.username}</span>
@@ -939,7 +940,7 @@ export function NetworkPage() {
                   <div className="flex items-center gap-3.5 min-w-0">
                     <Avatar src={student.avatarUrl} fallback={student.displayName} size="md" isOnline={true} />
                     <div className="min-w-0 space-y-0.5">
-                      <Link to={`/profile/${student.username}`} className="text-sm font-bold text-foreground hover:underline truncate block">
+                      <Link to={getProfileUrl(student)} className="text-sm font-bold text-foreground hover:underline truncate block">
                         {student.displayName}
                       </Link>
                       <p className="text-xs text-muted-foreground truncate">{student.headline || student.department}</p>
@@ -955,7 +956,7 @@ export function NetworkPage() {
                     >
                       Chat
                     </VynkButton>
-                    <Link to={`/profile/${student.username}`}>
+                    <Link to={getProfileUrl(student)}>
                       <VynkButton size="xs" variant="outline">
                         Profile
                       </VynkButton>
@@ -996,7 +997,7 @@ export function NetworkPage() {
                     <div className="flex items-center gap-3.5 min-w-0">
                       <Avatar src={req.sender?.avatarUrl} fallback={req.sender?.displayName || 'Student'} size="md" />
                       <div className="min-w-0 space-y-0.5">
-                        <Link to={`/profile/${req.sender?.username}`} className="text-sm font-bold text-foreground hover:underline truncate block">
+                        <Link to={getProfileUrl(req.sender)} className="text-sm font-bold text-foreground hover:underline truncate block">
                           {req.sender?.displayName}
                         </Link>
                         <p className="text-xs text-muted-foreground truncate">

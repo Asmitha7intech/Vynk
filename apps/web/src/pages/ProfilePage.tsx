@@ -101,8 +101,12 @@ export function ProfilePage() {
   };
 
   // If no param, fallback to authenticated currentUser
-  const targetUsername = username || currentUser?.username || '';
-  const isOwnProfile = currentUser && currentUser.username === targetUsername;
+  const targetUsername = username || currentUser?.username || currentUser?.id || '';
+  const isOwnProfile = Boolean(
+    currentUser &&
+      (currentUser.username?.toLowerCase() === targetUsername.toLowerCase() ||
+        currentUser.id === targetUsername)
+  );
 
   useEffect(() => {
     if (!targetUsername) {

@@ -7,9 +7,15 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        display: ['Syne', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
+      },
       colors: {
         background: 'var(--background)',
         foreground: 'var(--foreground)',
+        canvas: 'var(--canvas)',
         surface: {
           DEFAULT: 'var(--surface)',
           elevated: 'var(--surface-elevated)',
@@ -19,28 +25,36 @@ export default {
         card: 'var(--card)',
         'card-foreground': 'var(--card-foreground)',
         primary: {
-          DEFAULT: '#6366f1', // Electric Indigo
+          DEFAULT: '#7C5CFF', // Master Brand Violet
           foreground: '#ffffff',
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          glow: 'rgba(99, 102, 241, 0.4)',
+          50: '#f5f3ff',
+          100: '#ede9fe',
+          200: '#ddd6fe',
+          300: '#c4b5fd',
+          400: '#a78bfa',
+          500: '#7C5CFF',
+          600: '#6845ee',
+          700: '#5430d8',
+          800: '#4322ba',
+          900: '#341999',
+          glow: 'rgba(124, 92, 255, 0.35)',
         },
         secondary: {
-          DEFAULT: '#0ea5e9', // Cyber Cyan
+          DEFAULT: '#10E599', // Cyber Mint
+          foreground: '#0A0A0F',
+          50: '#f0fdf4',
+          400: '#34d399',
+          500: '#10E599',
+          600: '#059669',
+          glow: 'rgba(16, 229, 153, 0.35)',
+        },
+        highlight: {
+          DEFAULT: '#FF5376', // Coral Rose
           foreground: '#ffffff',
-          50: '#f0f9ff',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          glow: 'rgba(14, 165, 233, 0.4)',
+          400: '#fb7185',
+          500: '#FF5376',
+          600: '#e11d48',
+          glow: 'rgba(255, 83, 118, 0.35)',
         },
         accent: {
           DEFAULT: '#f59e0b', // Amber Gold (XP/Bounties)
