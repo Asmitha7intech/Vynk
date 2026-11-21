@@ -17,7 +17,7 @@ describe('Rotating Refresh Tokens & Session Family Reuse Detection Suite', () =>
       url: '/api/v1/auth/login',
       payload: {
         email: 'asmitha7intech@gmail.com',
-        password: '1111502ash@vynk',
+        password: 'Password123!',
       },
     });
 

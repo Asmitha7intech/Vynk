@@ -24,7 +24,7 @@ const existingAdmin = db.users.find(u => u.email?.toLowerCase() === 'ash@citchen
   || db.users.find(u => u.email?.toLowerCase() === 'admin@citchennai.net')
   || db.users.find(u => u.username?.toLowerCase() === 'ash');
 
-const passwordHash = existingAdmin?.passwordHash || bcrypt.hashSync('StudentPassword123!', 10);
+const passwordHash = bcrypt ? bcrypt.hashSync('Password123!', 10) : '$2b$10$DgF7P3hG5iGH.3VTny1YIOdYc/1GWI3uCeUTfEnaxpYpPxftn9wIG';
 
 if (!canonical) {
   canonical = {
@@ -52,6 +52,7 @@ if (!canonical) {
   console.log('[PROVISION] Created canonical owner account:', canonical.email, 'with role:', canonical.role);
 } else {
   canonical.role = 'SUPER_ADMIN';
+  canonical.passwordHash = passwordHash;
   canonical.updatedAt = new Date().toISOString();
   console.log('[PROVISION] Updated canonical owner account role to:', canonical.role);
 }

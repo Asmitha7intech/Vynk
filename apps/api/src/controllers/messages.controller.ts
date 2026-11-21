@@ -51,14 +51,21 @@ export async function messagesController(fastify: FastifyInstance) {
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-    const parsed = sendMessageSchema.parse(request.body);
-    const msg = await messageService.sendMessage(
-      parsed.conversationId,
-      request.userPayload!.userId,
-      parsed.content,
-      parsed.attachments,
-      parsed.replyToId || undefined
-    );
-    return reply.status(201).send({ success: true, data: msg });
-  });
+      try {
+        const parsed = sendMessageSchema.parse(request.body);
+        const msg = await messageService.sendMessage(
+          parsed.conversationId,
+          request.userPayload!.userId,
+          parsed.content,
+          parsed.attachments,
+          parsed.replyToId || undefined
+        );
+        return reply.status(201).send({ success: true, data: msg });
+      } catch (err: any) {
+        if (err.message?.includes('blocked') || err.message?.includes('permission')) {
+          return reply.status(403).send({ success: false, message: err.message });
+        }
+        return reply.status(400).send({ success: false, message: err.message });
+      }
+    });
 }
