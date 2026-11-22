@@ -19,7 +19,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   // Form State
   const [headline, setHeadline] = useState(user?.headline || '');
   const [bio, setBio] = useState(user?.bio || '');
-  const [college, setCollege] = useState(user?.college || 'CIT');
+  const [college, setCollege] = useState(user?.college || 'Coimbatore Institute of Technology (CIT)');
   const [department, setDepartment] = useState(user?.department || 'Computer Science');
   const [graduationYear, setGraduationYear] = useState(user?.graduationYear || 2026);
   const [currentlyBuilding, setCurrentlyBuilding] = useState('');
@@ -64,7 +64,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       setIsSubmitting(true);
       try {
         const updatePayload: Record<string, any> = {
-          college: college.trim() || 'CIT',
+          college: college.trim() || 'Coimbatore Institute of Technology (CIT)',
           department: department.trim() || 'Computer Science',
           graduationYear: Number(graduationYear) || 2026,
           isAvailableForCrews: true,

@@ -906,5 +906,7 @@ export interface CommunityMember {
   joinedAt: string;
 }
 
+export * from './coimbatore-institutions';
+
 
 

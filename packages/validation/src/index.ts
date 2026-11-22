@@ -7,45 +7,30 @@ import { z } from 'zod';
 export const RegisterSchema = z.object({
   email: z
     .string()
+    .trim()
     .email('Please enter a valid email address')
-    .refine(
-      (email) => {
-        const domain = email.split('@')[1]?.toLowerCase() || '';
-        return (
-          domain.endsWith('.edu') ||
-          domain.includes('.edu.') ||
-          domain.includes('.ac.') ||
-          domain.endsWith('.org') ||
-          domain.includes('student') ||
-          domain.includes('college') ||
-          domain.includes('campus') ||
-          domain.includes('univ') ||
-          domain === 'citchennai.net' ||
-          domain === 'cit.edu.in' ||
-          domain.includes('cit') ||
-          (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') ||
-          (typeof process !== 'undefined' && process.env?.ALLOW_ANY_EMAIL === 'true')
-        );
-      },
-      {
-        message: 'Registration requires an authorized college / institutional email address (.edu, .ac, etc.)',
-      }
-    ),
+    .transform((e) => e.toLowerCase()),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   username: z
     .string()
+    .trim()
     .min(3, 'Username must be at least 3 characters')
     .max(30, 'Username cannot exceed 30 characters')
-    .regex(/^[a-z0-9_]+$/, 'Username must contain only lowercase letters, numbers, and underscores'),
-  displayName: z.string().min(2, 'Display name must be at least 2 characters').max(50),
-  college: z.string().min(2, 'College / University name required'),
-  department: z.string().min(2, 'Department / Field of study required'),
+    .regex(/^[a-z0-9_]+$/, 'Username must contain only lowercase letters, numbers, and underscores')
+    .transform((u) => u.toLowerCase()),
+  displayName: z.string().trim().min(2, 'Display name must be at least 2 characters').max(50),
+  college: z.string().trim().min(2, 'College / University name required'),
+  department: z.string().trim().min(2, 'Department / Field of study required'),
   graduationYear: z.number().int().min(2020).max(2035).optional(),
 });
 export const registerSchema = RegisterSchema;
 
 export const LoginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z
+    .string()
+    .trim()
+    .email('Please enter a valid email address')
+    .transform((e) => e.toLowerCase()),
   password: z.string().min(1, 'Password is required'),
 });
 export const loginSchema = LoginSchema;

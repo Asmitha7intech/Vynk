@@ -152,27 +152,46 @@ try {
   }
 } catch {}
 
-if (!db.institutions || db.institutions.length === 0) {
-  const now = new Date().toISOString();
+const coimbatoreInstPath = path.resolve(rootDir, 'packages/database/src/coimbatore-institutions.json');
+let coimbatoreInstitutions = [];
+if (fs.existsSync(coimbatoreInstPath)) {
+  try {
+    coimbatoreInstitutions = JSON.parse(fs.readFileSync(coimbatoreInstPath, 'utf8'));
+  } catch {}
+}
+
+const now = new Date().toISOString();
+if (coimbatoreInstitutions.length > 0) {
+  db.institutions = coimbatoreInstitutions.map(inst => ({
+    id: inst.id,
+    name: inst.name,
+    slug: inst.id,
+    domains: inst.domains,
+    city: inst.areaScope === 'Coimbatore City' ? 'Coimbatore' : (inst.location.split(',')[1]?.trim() || 'Coimbatore District'),
+    country: 'IN',
+    category: inst.category,
+    location: inst.location,
+    areaScope: inst.areaScope,
+    code: inst.code,
+    isApproved: true,
+    createdAt: now,
+  }));
+} else if (!db.institutions || db.institutions.length === 0) {
   db.institutions = [
-    { id: 'inst-cit-005', name: 'Chennai Institute of Technology (CIT)', slug: 'cit-chennai', domains: ['citchennai.net', 'cit.edu.in'], city: 'Chennai', country: 'IN', isApproved: true, createdAt: now },
-    { id: 'inst-mit-001', name: 'Massachusetts Institute of Technology (MIT)', slug: 'mit', domains: ['mit.edu'], city: 'Cambridge', country: 'US', isApproved: true, createdAt: now },
-    { id: 'inst-stanford-002', name: 'Stanford University', slug: 'stanford', domains: ['stanford.edu'], city: 'Stanford', country: 'US', isApproved: true, createdAt: now },
-    { id: 'inst-berkeley-003', name: 'University of California, Berkeley', slug: 'berkeley', domains: ['berkeley.edu'], city: 'Berkeley', country: 'US', isApproved: true, createdAt: now },
-    { id: 'inst-cmu-004', name: 'Carnegie Mellon University', slug: 'cmu', domains: ['cmu.edu'], city: 'Pittsburgh', country: 'US', isApproved: true, createdAt: now },
+    { id: 'cbe-cit', name: 'Coimbatore Institute of Technology (CIT)', slug: 'cbe-cit', domains: ['cit.edu.in'], city: 'Coimbatore', country: 'IN', isApproved: true, createdAt: now },
   ];
 }
 
-if (!db.departments || db.departments.length === 0) {
-  const now = new Date().toISOString();
-  db.departments = [
-    { id: 'dept-cit-cs', institutionId: 'inst-cit-005', name: 'Computer Science and Engineering', code: 'CSE', studentCount: 180, createdAt: now },
-    { id: 'dept-cit-ai', institutionId: 'inst-cit-005', name: 'Artificial Intelligence & Data Science', code: 'AIDS', studentCount: 120, createdAt: now },
-    { id: 'dept-cit-cce', institutionId: 'inst-cit-005', name: 'Computer and Communication Engineering', code: 'CCE', studentCount: 90, createdAt: now },
-    { id: 'dept-cit-csbs', institutionId: 'inst-cit-005', name: 'Computer Science and Business Systems', code: 'CSBS', studentCount: 75, createdAt: now },
-    { id: 'dept-mit-cs', institutionId: 'inst-mit-001', name: 'Computer Science', code: 'CS', studentCount: 120, createdAt: now },
-  ];
-}
+db.departments = [
+  { id: 'dept-cit-cse', institutionId: 'cbe-cit', name: 'Computer Science and Engineering', code: 'CSE', studentCount: 180, createdAt: now },
+  { id: 'dept-cit-aids', institutionId: 'cbe-cit', name: 'Artificial Intelligence & Data Science', code: 'AIDS', studentCount: 120, createdAt: now },
+  { id: 'dept-cit-it', institutionId: 'cbe-cit', name: 'Information Technology', code: 'IT', studentCount: 120, createdAt: now },
+  { id: 'dept-cit-ece', institutionId: 'cbe-cit', name: 'Electronics and Communication Engineering', code: 'ECE', studentCount: 140, createdAt: now },
+  { id: 'dept-cit-eee', institutionId: 'cbe-cit', name: 'Electrical and Electronics Engineering', code: 'EEE', studentCount: 100, createdAt: now },
+  { id: 'dept-cit-mech', institutionId: 'cbe-cit', name: 'Mechanical Engineering', code: 'MECH', studentCount: 120, createdAt: now },
+  { id: 'dept-cit-civil', institutionId: 'cbe-cit', name: 'Civil Engineering', code: 'CIVIL', studentCount: 90, createdAt: now },
+  { id: 'dept-cit-chem', institutionId: 'cbe-cit', name: 'Chemical Engineering', code: 'CHEM', studentCount: 60, createdAt: now },
+];
 
 if (!db.badges || db.badges.length === 0) {
   db.badges = [

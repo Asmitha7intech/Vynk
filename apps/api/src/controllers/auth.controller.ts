@@ -19,11 +19,11 @@ export async function authController(fastify: FastifyInstance) {
     {
       config: {
         rateLimit:
-          process.env.NODE_ENV === 'test'
+          process.env.NODE_ENV !== 'production'
             ? false
             : {
-                max: 3,
-                timeWindow: 60 * 60 * 1000, // 3 attempts per hour
+                max: 10,
+                timeWindow: 60 * 60 * 1000, // 10 registrations per hour in production
               },
       },
     },
@@ -73,17 +73,25 @@ export async function authController(fastify: FastifyInstance) {
     {
       config: {
         rateLimit:
-          process.env.NODE_ENV === 'test'
+          process.env.NODE_ENV !== 'production'
             ? false
             : {
-                max: 5,
-                timeWindow: 15 * 60 * 1000, // 5 attempts per 15 minutes
+                max: 10,
+                timeWindow: 15 * 60 * 1000, // 10 attempts per 15 minutes in production
               },
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = loginSchema.parse(request.body);
-    const user = await authService.login(parsed.email, parsed.password);
+    let user;
+    try {
+      user = await authService.login(parsed.email, parsed.password);
+    } catch (err: any) {
+      return reply.status(401).send({
+        success: false,
+        message: err.message || 'Invalid email or password.',
+      });
+    }
 
     const session = await authService.createSession(
       user.id,

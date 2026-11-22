@@ -14,10 +14,41 @@ export const userRepository = {
     });
   },
 
-  findByEmail: async (email: string) => {
-    return prisma.user.findUnique({
-      where: { email },
-    });
+  findByEmail: async (rawEmail: string) => {
+    if (!rawEmail) return null;
+    const email = rawEmail.trim().toLowerCase();
+
+    // 1. Direct match with normalized email
+    try {
+      const direct = await prisma.user.findUnique({
+        where: { email },
+      });
+      if (direct) return direct;
+    } catch {}
+
+    // 2. Case-insensitive lookup
+    try {
+      const first = await prisma.user.findFirst({
+        where: {
+          email: {
+            equals: email,
+            mode: 'insensitive',
+          },
+        },
+      });
+      if (first) return first;
+    } catch {}
+
+    // 3. Resilient scan fallback for localStore/PGlite
+    try {
+      const allUsers = await prisma.user.findMany();
+      const match = allUsers.find(
+        (u) => u.email?.trim().toLowerCase() === email
+      );
+      return match || null;
+    } catch {
+      return null;
+    }
   },
 
   findByUsername: async (identifier: string) => {

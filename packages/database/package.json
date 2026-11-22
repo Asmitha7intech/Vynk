@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@node-rs/argon2": "^2.2.2",
     "@prisma/client": "^6.4.1",
+    "@vynk/types": "workspace:*",
     "dotenv": "^16.4.7"
   },
   "devDependencies": {

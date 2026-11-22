@@ -257,25 +257,41 @@ This log tracks every step executed across Phases B through G in accordance with
 - **Commands Run:**
   - `pnpm --filter @vynk/web build` (PASS: 18 chunks built in 12.09s)
 
-### Section 10 — Real Browser Verification & Playwright E2E Suite
-- **Timestamp:** 2026-11-22T00:08:00+05:30
-- **Step:** Section 10 Complete
+### Section 11 — Critical Authentication Fix & Coimbatore College Directory
+- **Timestamp:** 2026-11-22T22:15:00+05:30
+- **Step:** Critical Authentication Fix & Coimbatore College Directory
 - **Files Changed:**
-  - `playwright.config.ts` (Playwright configuration for desktop Chrome and mobile iPhone viewports)
-  - `scripts/run-e2e-browser-test.js` (Automated two-student collaboration browser suite)
-  - `docs/screenshots/final/` (12 verified screenshots captured)
+  - `packages/types/src/coimbatore-institutions.ts` (60 verified institutions across Coimbatore City and District; strictly excludes institutions outside Coimbatore district such as Bannari Amman Institute of Technology in Sathyamangalam, Erode District)
+  - `packages/types/src/index.ts` (exported `CoimbatoreInstitution` and `COIMBATORE_INSTITUTIONS`)
+  - `packages/database/src/coimbatore-institutions.json` (curated reference dataset of Coimbatore colleges)
+  - `packages/database/src/local-store.ts` (populated with Coimbatore institutions and CIT departments; dynamic Argon2id hashing)
+  - `apps/web/src/components/CollegeSelect.tsx` (accessible searchable dropdown with keyboard navigation, category filtering, CIT quick-select pill, touch targets $\ge 44\text{px}$, custom input fallback)
+  - `apps/web/src/pages/AuthPage.tsx` (integrated CollegeSelect into registration flow)
+  - `apps/web/src/components/OnboardingWizard.tsx` (updated default institution to CIT)
+  - `apps/web/src/pages/PulsePage.tsx` (unified administrator authorization for `ADMIN` and `SUPER_ADMIN`)
+  - `apps/web/test/routes.test.tsx` (resilient empty voyage state assertion)
+  - `apps/api/src/controllers/auth.controller.ts` (returns HTTP 401 for invalid credentials instead of 500)
+  - `apps/api/src/repositories/user.repository.ts` (case-insensitive and trimmed email lookup)
+  - `apps/api/src/services/auth.service.ts` (whitespace-tolerant and lowercase email normalization, relaxed rate limiting for dev)
+  - `packages/validation/src/index.ts` (removed academic email domain restriction to allow personal emails `@gmail.com`, trimmed & lowercased)
+  - `scripts/reset-dev-data.js` (synced institutions reference data with 60 Coimbatore institutions)
+  - `scripts/rotate-owner-password.js` (secure SuperAdmin password rotation utility)
+  - `apps/api/test/coimbatore_auth_recovery.test.ts` (14 new integration tests verifying directory, SuperAdmin login, student lifecycle, rate limiting, and personal email validation)
 - **Commands Run:**
-  - `node scripts/run-e2e-browser-test.js` (PASS: 12 screenshots captured across desktop 1440px and mobile 390px)
-  - `pnpm --filter @vynk/api test` (PASS: 19/19 test files, 177/177 tests green)
+  - `node scripts/reset-dev-data.js --confirm` (PASS: 60 institutions, 1 SuperAdmin)
+  - `node scripts/verify-clean.js` (PASS: 0 synthetic records, 100% clean)
+  - `pnpm --filter @vynk/api test` (PASS: 20/20 test files, 191/191 tests green)
+  - `pnpm --filter @vynk/web test` (PASS: 5/5 test files, 41/41 tests green)
   - `pnpm --filter @vynk/web typecheck` (PASS: 0 errors)
-  - `pnpm --filter @vynk/web build` (PASS: 0 errors)
-  - `node scripts/verify-clean.js` (PASS: 100% clean verification)
+  - `pnpm --filter @vynk/web build` (PASS: 0 errors, 12.01s)
 - **Real Results:**
-  - 177/177 API Vitest tests passing.
-  - Multi-viewport real browser Playwright execution confirmed.
-  - 12 real browser screenshots captured.
-  - 100% zero synthetic data verification.
+  - 191/191 API tests passing, 41/41 web tests passing.
+  - Zero synthetic data, database in 100% clean state with canonical SuperAdmin only.
+  - Searchable Coimbatore college directory active with CIT highlighted.
+  - Root cause of SuperAdmin login failure resolved (unquoted dotenv `#` comment truncation).
+  - Student registration and login lifecycle verified end-to-end.
 - **Open Blockers:** None
+
 
 
 

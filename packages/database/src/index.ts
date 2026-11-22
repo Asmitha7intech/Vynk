@@ -20,7 +20,9 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Track whether native PostgreSQL is reachable
-let isPostgresHealthy: boolean | null = null;
+// In development/test with embedded PGlite, default to local store immediately unless USE_REAL_POSTGRES=true
+let isPostgresHealthy: boolean | null =
+  process.env.NODE_ENV === 'production' || process.env.USE_REAL_POSTGRES === 'true' ? null : false;
 let lastCheckTime = 0;
 
 async function checkPostgresReachability(): Promise<boolean> {

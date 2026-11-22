@@ -2,7 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+import { hashSync, Algorithm } from '@node-rs/argon2';
 import { PGlite } from '@electric-sql/pglite';
+import { COIMBATORE_INSTITUTIONS } from '@vynk/types';
 
 function getWorkspaceRoot(): string {
   let curr = process.cwd();
@@ -25,6 +28,15 @@ function getWorkspaceRoot(): string {
   }
   return process.cwd();
 }
+
+// Ensure workspace root .env is loaded before localStore initializes
+(() => {
+  const wsRoot = getWorkspaceRoot();
+  const envFile = path.resolve(wsRoot, '.env');
+  if (fs.existsSync(envFile)) {
+    dotenv.config({ path: envFile });
+  }
+})();
 
 function getDatabaseConfig(): { isTest: boolean; dbDirPath: string | null } {
   const isTest = process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test';
@@ -288,77 +300,33 @@ class LocalStoreEngine {
     const state = this.state;
     const now = new Date().toISOString();
 
-    // 1. Institutions
-    const mitInstId = 'inst-mit-001';
-    const stanfordInstId = 'inst-stanford-002';
-    const berkeleyInstId = 'inst-berkeley-003';
-    const cmuInstId = 'inst-cmu-004';
-    const citInstId = 'inst-cit-005';
+    // 1. Verified Coimbatore District Institutions Directory
+    const citInstId = 'cbe-cit';
 
-    state.institutions = [
-      {
-        id: citInstId,
-        name: 'Chennai Institute of Technology (CIT)',
-        slug: 'cit-chennai',
-        domains: ['citchennai.net', 'cit.edu.in'],
-        city: 'Chennai',
-        country: 'IN',
-        isApproved: true,
-        createdAt: now,
-      },
-      {
-        id: mitInstId,
-        name: 'Massachusetts Institute of Technology (MIT)',
-        slug: 'mit',
-        domains: ['mit.edu'],
-        city: 'Cambridge',
-        country: 'US',
-        isApproved: true,
-        createdAt: now,
-      },
-      {
-        id: stanfordInstId,
-        name: 'Stanford University',
-        slug: 'stanford',
-        domains: ['stanford.edu'],
-        city: 'Stanford',
-        country: 'US',
-        isApproved: true,
-        createdAt: now,
-      },
-      {
-        id: berkeleyInstId,
-        name: 'University of California, Berkeley',
-        slug: 'berkeley',
-        domains: ['berkeley.edu'],
-        city: 'Berkeley',
-        country: 'US',
-        isApproved: true,
-        createdAt: now,
-      },
-      {
-        id: cmuInstId,
-        name: 'Carnegie Mellon University',
-        slug: 'cmu',
-        domains: ['cmu.edu'],
-        city: 'Pittsburgh',
-        country: 'US',
-        isApproved: true,
-        createdAt: now,
-      },
-    ];
+    state.institutions = COIMBATORE_INSTITUTIONS.map((inst) => ({
+      id: inst.id,
+      name: inst.name,
+      slug: inst.id,
+      domains: inst.domains,
+      city: inst.areaScope === 'Coimbatore City' ? 'Coimbatore' : inst.location.split(',')[1]?.trim() || 'Coimbatore District',
+      country: 'IN',
+      category: inst.category,
+      location: inst.location,
+      areaScope: inst.areaScope,
+      code: inst.code,
+      isApproved: true,
+      createdAt: now,
+    }));
 
     state.departments = [
-      { id: 'dept-mit-cs', institutionId: mitInstId, name: 'Computer Science', code: 'CS', studentCount: 120, createdAt: now },
-      { id: 'dept-mit-ai', institutionId: mitInstId, name: 'AI & Data Science', code: 'AIDS', studentCount: 85, createdAt: now },
-      { id: 'dept-stanford-cs', institutionId: stanfordInstId, name: 'Computer Science', code: 'CS', studentCount: 140, createdAt: now },
-      { id: 'dept-stanford-ai', institutionId: stanfordInstId, name: 'AI & Data Science', code: 'AIDS', studentCount: 95, createdAt: now },
-      { id: 'dept-berkeley-des', institutionId: berkeleyInstId, name: 'Design & HCI', code: 'DES', studentCount: 60, createdAt: now },
-      { id: 'dept-cmu-is', institutionId: cmuInstId, name: 'Information Security', code: 'IS', studentCount: 75, createdAt: now },
-      { id: 'dept-cit-cs', institutionId: citInstId, name: 'Computer Science and Engineering', code: 'CSE', studentCount: 180, createdAt: now },
-      { id: 'dept-cit-ai', institutionId: citInstId, name: 'Artificial Intelligence & Data Science', code: 'AIDS', studentCount: 120, createdAt: now },
-      { id: 'dept-cit-cce', institutionId: citInstId, name: 'Computer and Communication Engineering', code: 'CCE', studentCount: 90, createdAt: now },
-      { id: 'dept-cit-csbs', institutionId: citInstId, name: 'Computer Science and Business Systems', code: 'CSBS', studentCount: 75, createdAt: now },
+      { id: 'dept-cit-cse', institutionId: citInstId, name: 'Computer Science and Engineering', code: 'CSE', studentCount: 180, createdAt: now },
+      { id: 'dept-cit-aids', institutionId: citInstId, name: 'Artificial Intelligence & Data Science', code: 'AIDS', studentCount: 120, createdAt: now },
+      { id: 'dept-cit-it', institutionId: citInstId, name: 'Information Technology', code: 'IT', studentCount: 120, createdAt: now },
+      { id: 'dept-cit-ece', institutionId: citInstId, name: 'Electronics and Communication Engineering', code: 'ECE', studentCount: 140, createdAt: now },
+      { id: 'dept-cit-eee', institutionId: citInstId, name: 'Electrical and Electronics Engineering', code: 'EEE', studentCount: 100, createdAt: now },
+      { id: 'dept-cit-mech', institutionId: citInstId, name: 'Mechanical Engineering', code: 'MECH', studentCount: 120, createdAt: now },
+      { id: 'dept-cit-civil', institutionId: citInstId, name: 'Civil Engineering', code: 'CIVIL', studentCount: 90, createdAt: now },
+      { id: 'dept-cit-chem', institutionId: citInstId, name: 'Chemical Engineering', code: 'CHEM', studentCount: 60, createdAt: now },
     ];
 
     // 2. Badges
@@ -390,6 +358,19 @@ class LocalStoreEngine {
     const ownerEmail = (process.env.OWNER_EMAIL || 'asmitha7intech@gmail.com').toLowerCase().trim();
     const ownerUsername = (process.env.OWNER_USERNAME || 'asmitha').toLowerCase().trim();
     const ownerDisplayName = process.env.OWNER_DISPLAY_NAME || 'Asmitha S';
+    const ownerPassword = process.env.OWNER_INITIAL_PASSWORD || 'Vynk!Owner2026@Pass';
+
+    let ownerPasswordHash = '';
+    try {
+      ownerPasswordHash = hashSync(ownerPassword, {
+        algorithm: Algorithm.Argon2id,
+        memoryCost: 19456,
+        timeCost: 2,
+        outputLen: 32,
+      });
+    } catch {
+      ownerPasswordHash = bcrypt.hashSync(ownerPassword, 10);
+    }
 
     const canonicalOwner = {
       id: 'owner-asmitha-canonical',
@@ -398,12 +379,13 @@ class LocalStoreEngine {
       email: ownerEmail,
       username: ownerUsername,
       displayName: ownerDisplayName,
-      passwordHash: '$argon2id$v=19$m=65536,t=3,p=1$IbZD14Er0iLyJlWgMdk8TQ$9fJw48AJ+42J9pPFD1cM05V+Q/uVZVA7NrrB8F2bE8U',
-      college: 'Chennai Institute of Technology',
-      department: 'Computer Science',
+      passwordHash: ownerPasswordHash,
+      college: 'Coimbatore Institute of Technology (CIT)',
+      department: 'Computer Science and Engineering',
       graduationYear: 2026,
       role: 'SUPER_ADMIN',
       mustChangePassword: true,
+      isActive: true,
       xp: 0,
       level: 1,
       reputationScore: 100,

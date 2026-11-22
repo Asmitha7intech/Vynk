@@ -202,9 +202,15 @@ importers:
       '@electric-sql/pglite':
         specifier: ^0.5.8
         version: 0.5.8
+      '@node-rs/argon2':
+        specifier: ^2.2.2
+        version: 2.2.2
       '@prisma/client':
         specifier: ^6.4.1
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+      '@vynk/types':
+        specifier: workspace:*
+        version: link:../types
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1

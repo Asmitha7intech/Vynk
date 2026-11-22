@@ -29,8 +29,9 @@ async function provisionOwner() {
   let initialPassword = process.env.OWNER_INITIAL_PASSWORD;
 
   if (!initialPassword) {
-    initialPassword = `Vynk#${crypto.randomBytes(8).toString('hex')}!Aa9`;
-    fs.appendFileSync(envPath, `\nOWNER_INITIAL_PASSWORD=${initialPassword}\n`);
+    const randPart = crypto.randomBytes(9).toString('base64url').replace(/[-_]/g, 'A');
+    initialPassword = `Vynk!${randPart}@9`;
+    fs.appendFileSync(envPath, `\nOWNER_INITIAL_PASSWORD="${initialPassword}"\n`);
     console.log('[PROVISION] Generated fresh initial owner password and saved to .env (not displayed for security).');
   }
 
@@ -65,8 +66,8 @@ async function provisionOwner() {
     username: ownerUsername,
     displayName: ownerDisplayName,
     passwordHash: passwordHash,
-    college: 'Chennai Institute of Technology',
-    department: 'Computer Science',
+    college: 'Coimbatore Institute of Technology (CIT)',
+    department: 'Computer Science and Engineering',
     graduationYear: 2026,
     role: 'SUPER_ADMIN',
     mustChangePassword: true,

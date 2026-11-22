@@ -4,15 +4,7 @@ import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/api';
 import { Component as SignInCard, Input } from '../components/ui/sign-in-card-2';
 import { KeyRound, CheckCircle2, AlertCircle, X, ArrowRight, ShieldCheck, Calendar, Building2 } from 'lucide-react';
-
-const PRESET_COLLEGES = [
-  'Chennai Institute of Technology (CIT)',
-  'Massachusetts Institute of Technology (MIT)',
-  'Stanford University',
-  'University of California, Berkeley',
-  'Carnegie Mellon University',
-  'Other / Not Listed',
-];
+import { CollegeSelect, OTHER_OPTION } from '../components/CollegeSelect';
 
 export function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -21,7 +13,7 @@ export function AuthPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [selectedCollege, setSelectedCollege] = useState('Chennai Institute of Technology (CIT)');
+  const [selectedCollege, setSelectedCollege] = useState('Coimbatore Institute of Technology (CIT)');
   const [customCollege, setCustomCollege] = useState('');
   const [department, setDepartment] = useState('Computer Science');
   const [graduationYear, setGraduationYear] = useState('2026');
@@ -129,7 +121,7 @@ export function AuthPage() {
           return;
         }
 
-        const resolvedCollege = selectedCollege === 'Other / Not Listed'
+        const resolvedCollege = selectedCollege === OTHER_OPTION
           ? (customCollege.trim() || 'Other')
           : selectedCollege;
 
@@ -223,37 +215,14 @@ export function AuthPage() {
         </div>
       </div>
 
-      {/* College Selection */}
-      <div className="space-y-1">
-        <label className="text-[11px] font-semibold text-white/70 flex items-center gap-1.5">
-          <Building2 className="w-3.5 h-3.5 text-indigo-400" /> College / Institution
-        </label>
-        <select
-          value={selectedCollege}
-          onChange={(e) => setSelectedCollege(e.target.value)}
-          className="w-full bg-[#181822] border border-white/10 text-white h-10 text-xs px-3 rounded-xl focus:border-indigo-400 focus:outline-none"
-        >
-          {PRESET_COLLEGES.map((c) => (
-            <option key={c} value={c} className="bg-[#181822] text-white">
-              {c}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {selectedCollege === 'Other / Not Listed' && (
-        <div className="space-y-1 animate-in fade-in duration-200">
-          <label className="text-[11px] font-semibold text-white/70">Enter Your Institution Name</label>
-          <Input
-            type="text"
-            placeholder="e.g. National Institute of Technology"
-            value={customCollege}
-            onChange={(e) => setCustomCollege(e.target.value)}
-            required
-            className="w-full bg-white/5 border-white/10 text-white placeholder:text-white/30 h-10 text-xs px-3 rounded-xl focus:border-indigo-400"
-          />
-        </div>
-      )}
+      {/* Searchable Coimbatore College Selection */}
+      <CollegeSelect
+        value={selectedCollege}
+        customValue={customCollege}
+        onChange={setSelectedCollege}
+        onCustomChange={setCustomCollege}
+        disabled={isLoading}
+      />
 
       <div className="grid grid-cols-2 gap-2.5">
         <div className="space-y-1">

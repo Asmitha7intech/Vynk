@@ -16,12 +16,15 @@ export const authService = {
     graduationYear?: number;
     role?: Role;
   }) => {
-    const existingEmail = await userRepository.findByEmail(input.email);
+    const cleanEmail = (input.email || '').trim().toLowerCase();
+    const cleanUsername = (input.username || '').trim().toLowerCase();
+
+    const existingEmail = await userRepository.findByEmail(cleanEmail);
     if (existingEmail) {
       throw new Error('An account with this email already exists.');
     }
 
-    const existingUsername = await userRepository.findByUsername(input.username);
+    const existingUsername = await userRepository.findByUsername(cleanUsername);
     if (existingUsername) {
       throw new Error('Username is already taken.');
     }
@@ -30,14 +33,15 @@ export const authService = {
 
     const user = await prisma.user.create({
       data: {
-        email: input.email,
-        username: input.username,
-        displayName: input.displayName,
+        email: cleanEmail,
+        username: cleanUsername,
+        displayName: input.displayName?.trim() || cleanUsername,
         passwordHash,
         college: input.college?.trim() || 'CIT',
         department: input.department?.trim() || 'Computer Science',
         graduationYear: input.graduationYear,
         role: (input.role as any) || 'STUDENT',
+        isActive: true,
         xp: 50, // Profile creation bonus
         level: 1,
         reputationScore: 100,
@@ -69,9 +73,14 @@ export const authService = {
   },
 
   login: async (email: string, password: string) => {
-    const user = await userRepository.findByEmail(email);
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const user = await userRepository.findByEmail(cleanEmail);
     if (!user) {
       throw new Error('Invalid email or password.');
+    }
+
+    if (user.isActive === false) {
+      throw new Error('Your account is inactive or suspended. Please contact campus support.');
     }
 
     const { isValid, needsRehash } = await passwordService.verifyPassword(user.passwordHash, password);

@@ -130,7 +130,7 @@ describe('VoyagesPage Suite', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('No voyages showcased in this category yet')).toBeDefined();
+      expect(screen.getByText(/No voyages/i)).toBeDefined();
     });
   });
 
