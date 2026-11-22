@@ -4,6 +4,7 @@ import { VynkButton } from './VynkButton';
 
 export interface EmptyStateProps {
   icon?: LucideIcon;
+  showBrandMark?: boolean;
   title: string;
   description: string;
   actionLabel?: string;
@@ -13,6 +14,7 @@ export interface EmptyStateProps {
 
 export function EmptyState({
   icon: Icon = Sparkles,
+  showBrandMark = false,
   title,
   description,
   actionLabel,
@@ -21,8 +23,16 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className={`p-10 sm:p-14 text-center rounded-3xl glass-panel space-y-4 max-w-md mx-auto my-6 ${className || ''}`}>
-      <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto shadow-glow-indigo">
-        <Icon className="w-7 h-7" />
+      <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto p-2.5">
+        {showBrandMark ? (
+          <img
+            src="/vynk-logo.png"
+            alt="VYNK"
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          <Icon className="w-7 h-7 text-indigo-400" />
+        )}
       </div>
 
       <div className="space-y-1.5">

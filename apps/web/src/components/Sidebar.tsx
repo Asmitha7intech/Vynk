@@ -120,10 +120,17 @@ export function Sidebar({ onOpenCreatePost }: SidebarProps = {}) {
         </nav>
 
         {/* Dynamic VYNK Ethos Card */}
-        <div className="p-4 rounded-3xl glass-card border border-indigo-500/20 space-y-2 relative overflow-hidden">
+        <div className="p-4 rounded-3xl glass-card border border-indigo-500/20 space-y-3 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="text-[10px] font-black tracking-wider text-indigo-400 uppercase font-mono">
-            VYNK Ethos
+          <div className="flex items-center gap-2">
+            <img
+              src="/vynk-logo.png"
+              alt="VYNK Symbol"
+              className="w-5 h-5 object-contain"
+            />
+            <div className="text-[10px] font-black tracking-wider text-indigo-400 uppercase font-mono">
+              VYNK Ethos
+            </div>
           </div>
           <p className="text-xs font-semibold text-foreground/90 leading-relaxed">
             &ldquo;Find your people. Learn. Build. Rise.&rdquo;

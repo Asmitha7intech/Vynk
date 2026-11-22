@@ -152,33 +152,28 @@ export function SignInCard({
               {/* Brand Header */}
               <div className="text-center space-y-2 relative z-10">
                 <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
+                  initial={{ scale: 0.85, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', duration: 0.7 }}
-                  className="mx-auto w-14 h-14 rounded-2xl overflow-hidden shadow-xl shadow-indigo-500/25 ring-1 ring-indigo-500/40 p-1 bg-gradient-to-br from-indigo-500/20 to-purple-600/30 flex items-center justify-center"
+                  transition={{ type: 'spring', duration: 0.6 }}
+                  className="mx-auto w-16 h-16 flex items-center justify-center p-1"
                 >
                   <img
                     src="/vynk-logo.png"
-                    alt="VYNK Logo"
-                    className="w-full h-full object-contain rounded-xl"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                      const parent = (e.target as HTMLElement).parentElement;
-                      if (parent) {
-                        parent.innerHTML = '<span class="text-xl font-black text-white font-mono">V</span>';
-                      }
-                    }}
+                    alt="VYNK — Student Social & Collaboration Platform"
+                    className="w-full h-full object-contain"
                   />
                 </motion.div>
 
-                <motion.h1
+                <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 }}
-                  className="text-xl sm:text-2xl font-black tracking-tight text-white"
+                  className="space-y-0.5"
                 >
-                  {isLogin ? 'Welcome Back to VYNK' : 'Join the Student Network'}
-                </motion.h1>
+                  <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                    {isLogin ? 'Welcome Back to VYNK' : 'Join the Student Network'}
+                  </h1>
+                </motion.div>
 
                 <motion.p
                   initial={{ opacity: 0 }}

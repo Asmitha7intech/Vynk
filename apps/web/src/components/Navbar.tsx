@@ -19,6 +19,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useThemeStore } from '../stores/themeStore';
 import { Avatar } from './Avatar';
 import { VynkButton } from './vynk/VynkButton';
+import { VynkLogo } from './vynk/VynkLogo';
 import { StreakBadge } from './StreakBadge';
 import { api } from '../lib/api';
 import { getSocket } from '../lib/socket';
@@ -98,24 +99,7 @@ export function Navbar({ onOpenCreatePost, onOpenCommandPalette }: NavbarProps) 
     <header className="sticky top-0 z-40 w-full bg-surface/75 backdrop-blur-xl border-b border-surface-border px-4 lg:px-8 py-2.5 flex items-center justify-between transition-all">
       {/* Brand & Search */}
       <div className="flex items-center gap-6 flex-1 max-w-xl">
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="relative">
-            <img
-              src="/vynk-logo.png"
-              alt="VYNK"
-              className="w-9 h-9 object-contain rounded-2xl shadow-glow-indigo group-hover:scale-105 transition-transform"
-            />
-            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-background animate-pulse" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-black text-xl tracking-normal bg-gradient-to-r from-foreground via-foreground to-indigo-400 bg-clip-text text-transparent leading-none">
-              VYNK
-            </span>
-            <span className="text-[9px] font-mono tracking-wider uppercase text-muted-foreground font-bold mt-0.5">
-              Campus OS
-            </span>
-          </div>
-        </Link>
+        <VynkLogo size="md" tagline="Campus OS" linkToHome compactOnMobile />
 
         {/* Global Search & Command trigger */}
         <form onSubmit={handleSearchSubmit} className="relative flex-1 hidden md:block">

@@ -88,16 +88,22 @@ export function ChangePasswordPage() {
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary shadow-lg shadow-primary/20">
-            <KeyRound className="w-6 h-6" />
+        <div className="text-center space-y-3">
+          <div className="mx-auto w-14 h-14 flex items-center justify-center p-1">
+            <img
+              src="/vynk-logo.png"
+              alt="VYNK"
+              className="w-full h-full object-contain"
+            />
           </div>
-          <h1 className="text-xl font-bold font-sans tracking-normal text-white">
-            Set Your Permanent Password
-          </h1>
-          <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-            Welcome to VYNK, {user?.displayName || 'Builder'}. Please choose a strong, secure password for your account to complete setup.
-          </p>
+          <div className="space-y-1">
+            <h1 className="text-xl font-bold font-sans tracking-normal text-white">
+              Set Your Permanent Password
+            </h1>
+            <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+              Welcome to VYNK, {user?.displayName || 'Builder'}. Please choose a strong, secure password for your account to complete setup.
+            </p>
+          </div>
         </div>
 
         {/* Alerts */}

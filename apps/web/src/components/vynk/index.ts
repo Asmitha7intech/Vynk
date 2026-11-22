@@ -13,5 +13,6 @@ export * from './EmptyState';
 export * from './ErrorState';
 export * from './Tooltip';
 export * from './CommandPalette';
+export * from './VynkLogo';
 export * from './VynkNetworkGraph';
 export * from './VynkPeopleSphere';

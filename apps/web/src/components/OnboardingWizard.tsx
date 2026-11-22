@@ -100,9 +100,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         {/* Progress Header */}
         <div className="bg-gradient-to-r from-indigo-950 via-card to-card p-6 border-b border-border/80">
           <div className="flex items-center justify-between mb-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-black">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>IDENTITY CREATION • STEP {currentStep} OF 5</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white text-xs font-black">
+              <img src="/vynk-logo.png" alt="VYNK" className="w-3.5 h-3.5 object-contain" />
+              <span>VYNK IDENTITY • STEP {currentStep} OF 5</span>
             </div>
             <span className="text-xs text-muted-foreground font-mono font-bold">{currentStep * 20}%</span>
           </div>

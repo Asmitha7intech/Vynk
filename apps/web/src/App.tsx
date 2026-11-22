@@ -27,9 +27,21 @@ const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage').then((m) =>
 
 function PageFallback() {
   return (
-    <div className="min-h-screen bg-[#0A0A0F] flex flex-col items-center justify-center gap-3">
-      <div className="w-9 h-9 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
-      <span className="text-xs font-mono text-muted-foreground animate-pulse">Loading VYNK...</span>
+    <div className="min-h-screen bg-[#0A0A0F] flex flex-col items-center justify-center gap-4 select-none">
+      <div className="relative w-16 h-16 flex items-center justify-center">
+        <img
+          src="/vynk-logo.png"
+          alt="VYNK"
+          className="w-14 h-14 object-contain animate-pulse"
+        />
+        <div className="absolute inset-0 rounded-full border-2 border-indigo-500/20 border-t-indigo-400 animate-spin pointer-events-none" />
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <span className="text-sm font-black tracking-normal text-white font-sans">VYNK</span>
+        <span className="text-[10px] font-mono tracking-widest text-muted-foreground uppercase">
+          Campus OS
+        </span>
+      </div>
     </div>
   );
 }
