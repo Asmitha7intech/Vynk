@@ -1,0 +1,250 @@
+name: VYNK Production Deployment (CI/CD)
+
+on:
+  push:
+    branches: [main, clean-reset]
+  workflow_dispatch:
+    inputs:
+      skip_migrations:
+        description: 'Skip database migrations (true/false)'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  # =========================================================================
+  # 1. QUALITY ASSURANCE & ARTIFACT BUILD
+  # =========================================================================
+  build-and-test:
+    name: 1. Build, Typecheck & Automated Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter @vynk/database db:generate
+
+      - name: Typecheck Monorepo Packages
+        run: pnpm --filter @vynk/api typecheck && pnpm --filter @vynk/web typecheck
+
+      - name: Run Backend Vitest Suite (API)
+        run: pnpm --filter @vynk/api test
+        env:
+          NODE_ENV: test
+          APP_ENV: test
+          JWT_SECRET: ci-secret-key-32-bytes-minimum-length-test
+          JWT_REFRESH_SECRET: ci-refresh-secret-32-bytes-minimum-length-test
+          COOKIE_SECRET: ci-cookie-secret-32-bytes-minimum-length-test
+
+      - name: Run Frontend Vitest Suite (Web)
+        run: pnpm --filter @vynk/web test
+
+      - name: Execute Multi-Account 15-Point E2E Integration Suite
+        run: ./apps/api/node_modules/.bin/tsx scripts/verify-full-e2e.ts
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci-secret-key-32-bytes-minimum-length-test
+          JWT_REFRESH_SECRET: ci-refresh-secret-32-bytes-minimum-length-test
+          COOKIE_SECRET: ci-cookie-secret-32-bytes-minimum-length-test
+
+      - name: Build Monorepo (API & Web)
+        run: pnpm build
+
+  # =========================================================================
+  # 2. MANAGED POSTGRESQL MIGRATIONS
+  # =========================================================================
+  migrate-database:
+    name: 2. Apply Database Migrations (PostgreSQL)
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event.inputs.skip_migrations != 'true'
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Prisma Production Migrations
+        if: env.DATABASE_URL != ''
+        run: pnpm --filter @vynk/database exec prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+      - name: Bootstrap Canonical Super Admin Account
+        if: env.DATABASE_URL != ''
+        run: pnpm --filter @vynk/api exec tsx scripts/seed-canonical-owner.ts || true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          OWNER_EMAIL: ${{ secrets.OWNER_EMAIL || 'asmitha7intech@gmail.com' }}
+          OWNER_INITIAL_PASSWORD: ${{ secrets.OWNER_INITIAL_PASSWORD }}
+
+  # =========================================================================
+  # 3. BACKEND DEPLOYMENT (Railway / Container Host)
+  # =========================================================================
+  deploy-backend:
+    name: 3. Deploy API Backend (Railway)
+    needs: [build-and-test, migrate-database]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        if: env.RAILWAY_TOKEN != ''
+        run: npm install -g @railway/cli
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy Backend to Railway
+        if: env.RAILWAY_TOKEN != ''
+        run: railway up --service api --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE_NAME || 'api' }}
+
+      - name: Fallback Deploy Webhook Trigger
+        if: env.RAILWAY_TOKEN == '' && env.BACKEND_DEPLOY_WEBHOOK != ''
+        run: |
+          echo "Triggering backend deployment webhook..."
+          curl -X POST -f "${{ secrets.BACKEND_DEPLOY_WEBHOOK }}"
+        env:
+          BACKEND_DEPLOY_WEBHOOK: ${{ secrets.BACKEND_DEPLOY_WEBHOOK }}
+
+  # =========================================================================
+  # 4. FRONTEND DEPLOYMENT (Vercel)
+  # =========================================================================
+  deploy-frontend:
+    name: 4. Deploy Frontend SPA (Vercel)
+    needs: [build-and-test, migrate-database]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install Vercel CLI
+        if: env.VERCEL_TOKEN != ''
+        run: npm install -g vercel@latest
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel (Production)
+        if: env.VERCEL_TOKEN != ''
+        working-directory: apps/web
+        run: |
+          vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+          vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VITE_API_URL: ${{ secrets.PROD_API_URL }}
+          VITE_SOCKET_URL: ${{ secrets.PROD_API_URL }}
+
+  # =========================================================================
+  # 5. HEALTH VERIFICATION & STATUS REPORT
+  # =========================================================================
+  verify-deployment:
+    name: 5. Verify Public Health Checks & Telemetry
+    needs: [deploy-backend, deploy-frontend]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Verify Backend API Health
+        if: env.PROD_API_URL != ''
+        run: |
+          echo "Probing Backend Health: ${{ secrets.PROD_API_URL }}/health"
+          for i in {1..10}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.PROD_API_URL }}/health" || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Backend API is healthy and reachable (HTTP 200)!"
+              exit 0
+            fi
+            echo "Waiting for backend container startup... attempt $i/10 (Got HTTP $STATUS)"
+            sleep 10
+          done
+          echo "⚠️ Backend health check timed out"
+          exit 1
+        env:
+          PROD_API_URL: ${{ secrets.PROD_API_URL }}
+
+      - name: Verify Frontend Web App Health
+        if: env.PROD_WEB_URL != ''
+        run: |
+          echo "Probing Frontend App: ${{ secrets.PROD_WEB_URL }}"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.PROD_WEB_URL }}" || true)
+          if [ "$STATUS" = "200" ] || [ "$STATUS" = "304" ]; then
+            echo "✅ Frontend Web App is live and serving traffic (HTTP $STATUS)!"
+          else
+            echo "⚠️ Frontend probe returned HTTP $STATUS"
+          fi
+        env:
+          PROD_WEB_URL: ${{ secrets.PROD_WEB_URL }}
+
+      - name: Publish Deployment Summary
+        if: always()
+        run: |
+          echo "## 🚀 VYNK Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :---: |" >> $GITHUB_STEP_SUMMARY
+          echo "| **1. Quality & Tests** | ${{ needs.build-and-test.result == 'success' && '✅ PASSED' || '❌ FAILED' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **2. Database Migrations** | ${{ needs.migrate-database.result == 'success' && '✅ PASSED' || '⚠️ SKIPPED / CHECK' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **3. Backend API** | ${{ needs.deploy-backend.result == 'success' && '✅ DEPLOYED' || '⚠️ CHECK SECRETS' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **4. Frontend Web** | ${{ needs.deploy-frontend.result == 'success' && '✅ DEPLOYED' || '⚠️ CHECK SECRETS' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\` on branch \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY

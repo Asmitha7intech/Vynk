@@ -2,10 +2,12 @@ import { io, Socket } from 'socket.io-client';
 
 let socket: Socket | null = null;
 
+const SOCKET_URL = (import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || '').replace(/\/api\/v1\/?$/, '') || '/';
+
 export function getSocket(): Socket {
   const token = localStorage.getItem('vynk_access_token');
   if (!socket) {
-    socket = io('/', {
+    socket = io(SOCKET_URL, {
       auth: { token },
       autoConnect: !!token,
       reconnection: true,
@@ -27,7 +29,7 @@ export function getSocket(): Socket {
 export function connectSocket(token?: string | null): Socket {
   const authToken = token || localStorage.getItem('vynk_access_token');
   if (!socket) {
-    socket = io('/', {
+    socket = io(SOCKET_URL, {
       auth: { token: authToken },
       autoConnect: true,
       reconnection: true,

@@ -33,7 +33,7 @@ COPY apps/api/ ./apps/api/
 # Generate Prisma client and build packages
 RUN pnpm --filter @vynk/types build || true
 RUN pnpm --filter @vynk/validation build || true
-RUN pnpm --filter @vynk/database prisma:generate || true
+RUN pnpm --filter @vynk/database db:generate
 RUN pnpm --filter @vynk/api build
 
 # --- Stage 2: Production Runtime ---
@@ -60,9 +60,10 @@ COPY apps/api/package.json ./apps/api/
 # Install production dependencies only
 RUN pnpm install --prod --frozen-lockfile
 
-# Copy compiled code from builder
+# Copy compiled code and Prisma engine from builder
 COPY --from=builder /app/packages/ ./packages/
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Create uploads directory and set permissions
 RUN mkdir -p /app/data/uploads /app/data/lake && chown -R node:node /app

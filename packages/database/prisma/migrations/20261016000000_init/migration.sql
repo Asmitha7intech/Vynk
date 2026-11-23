@@ -30,6 +30,7 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "emailVerified" BOOLEAN NOT NULL DEFAULT false,
+    "mustChangePassword" BOOLEAN NOT NULL DEFAULT false,
     "passwordHash" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "displayName" TEXT NOT NULL,

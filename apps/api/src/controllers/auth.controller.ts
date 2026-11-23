@@ -52,7 +52,7 @@ export async function authController(fastify: FastifyInstance) {
       path: '/',
       httpOnly: true,
       secure: config.nodeEnv === 'production',
-      sameSite: 'lax',
+      sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60,
     });
 
@@ -114,7 +114,7 @@ export async function authController(fastify: FastifyInstance) {
       path: '/',
       httpOnly: true,
       secure: config.nodeEnv === 'production',
-      sameSite: 'lax',
+      sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60,
     });
 
@@ -276,7 +276,7 @@ export async function authController(fastify: FastifyInstance) {
         path: '/',
         httpOnly: true,
         secure: config.nodeEnv === 'production',
-        sameSite: 'lax',
+        sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
         maxAge: 7 * 24 * 60 * 60,
       });
 

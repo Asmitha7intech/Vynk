@@ -102,9 +102,13 @@ function createLocalClient(): any {
 
 const localClient = createLocalClient();
 
-// Resilient Prisma Proxy that executes against PostgreSQL when available,
-// and automatically falls back to the persistent LocalStore without crashing.
-export const prisma: PrismaClient = new Proxy(rawPrisma as any, {
+// Resilient Prisma Proxy:
+// In strict production, routes directly to native rawPrisma (enforcing remote PostgreSQL).
+// In development and test environments, provides automatic PGlite local store fallback.
+export const prisma: PrismaClient =
+  process.env.NODE_ENV === 'production' && process.env.ALLOW_LOCAL_FALLBACK !== 'true'
+    ? rawPrisma
+    : new Proxy(rawPrisma as any, {
   get(target, modelProp: string | symbol) {
     if (typeof modelProp === 'symbol') return (target as any)[modelProp];
 

@@ -72,7 +72,11 @@ export async function buildServer() {
     origin: (origin, cb) => {
       // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
       if (!origin) return cb(null, true);
-      if (config.nodeEnv === 'development' || allowedOrigins.includes(origin)) {
+      if (
+        config.nodeEnv === 'development' ||
+        allowedOrigins.includes(origin) ||
+        allowedOrigins.some((allowed) => allowed === '*' || (allowed.startsWith('*.') && origin.endsWith(allowed.slice(1))))
+      ) {
         return cb(null, true);
       }
       return cb(new Error('Not allowed by CORS'), false);
