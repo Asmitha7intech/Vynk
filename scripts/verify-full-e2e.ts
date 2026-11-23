@@ -427,9 +427,37 @@ async function run() {
   });
   assert(meVerifyRes.statusCode === 200, `Student A session restored and verified via /auth/me`);
 
+  // -------------------------------------------------------------
+  // 11. PROFILE IMAGE / AVATAR UPLOAD & STORAGE PERSISTENCE
+  // -------------------------------------------------------------
+  console.log('\n--- 15. Verifying Avatar Image Upload & Storage Persistence ---');
+  const png1x1Base64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const uploadAvatarRes = await server.inject({
+    method: 'POST',
+    url: '/api/v1/profile/me/avatar',
+    headers: { authorization: `Bearer ${freshTokenA}` },
+    payload: {
+      avatarData: `data:image/png;base64,${png1x1Base64}`,
+    },
+  });
+  assert(uploadAvatarRes.statusCode === 200, `Student A avatar uploaded successfully (Status: ${uploadAvatarRes.statusCode})`);
+  const uploadAvatarBody = JSON.parse(uploadAvatarRes.payload);
+  assert(uploadAvatarBody.success === true, 'Avatar upload response success is true');
+  assert(uploadAvatarBody.data.avatarUrl.includes('/uploads/avatars/'), `Avatar URL saved in storage: ${uploadAvatarBody.data.avatarUrl}`);
+
+  // Verify avatarUrl is persisted in database
+  const verifyAvatarDbRes = await server.inject({
+    method: 'GET',
+    url: '/api/v1/profile/me',
+    headers: { authorization: `Bearer ${freshTokenA}` },
+  });
+  const verifyAvatarDb = JSON.parse(verifyAvatarDbRes.payload);
+  const userWithAvatar = verifyAvatarDb.data?.user || verifyAvatarDb.data;
+  assert(userWithAvatar.avatarUrl === uploadAvatarBody.data.avatarUrl, 'Avatar URL persisted in database');
+
   await server.close();
   console.log('\n=====================================================');
-  console.log('   ALL 14 MULTI-ACCOUNT VERIFICATION TESTS PASSED!');
+  console.log('   ALL 15 MULTI-ACCOUNT VERIFICATION TESTS PASSED!');
   console.log('=====================================================');
   process.exit(0);
 }
