@@ -541,7 +541,11 @@ function matchesFilter(item: any, where: any, state: DbState): boolean {
     if (typeof val === 'object' && !(val instanceof Date)) {
       const v = val as any;
       if ('equals' in v) {
-        if (itemVal !== v.equals) return false;
+        if (v.mode === 'insensitive' && typeof itemVal === 'string' && typeof v.equals === 'string') {
+          if (itemVal.toLowerCase() !== v.equals.toLowerCase()) return false;
+        } else {
+          if (itemVal !== v.equals) return false;
+        }
       }
       if ('contains' in v) {
         const needle = String(v.contains);

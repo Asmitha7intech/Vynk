@@ -64,7 +64,7 @@ export function ChangePasswordPage() {
         newPassword,
       });
 
-      if (res?.success) {
+      if (res?.success || res?.user) {
         updateUser({ mustChangePassword: false });
         setSuccessMessage('Password updated successfully! Navigating to campus hub...');
         setTimeout(() => {

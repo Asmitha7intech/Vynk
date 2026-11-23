@@ -34,6 +34,8 @@ export interface SignInCardProps {
   errorMessage?: string;
   extraFields?: React.ReactNode;
   onForgotPassword?: () => void;
+  rememberMe?: boolean;
+  setRememberMe?: (val: boolean) => void;
   className?: string;
 }
 
@@ -49,18 +51,22 @@ export function SignInCard({
   errorMessage = '',
   extraFields,
   onForgotPassword,
+  rememberMe: controlledRememberMe,
+  setRememberMe: setControlledRememberMe,
   className = '',
 }: SignInCardProps) {
   const [internalEmail, setInternalEmail] = useState('');
   const [internalPassword, setInternalPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [internalRememberMe, setInternalRememberMe] = useState(true);
 
   const email = controlledEmail !== undefined ? controlledEmail : internalEmail;
   const setEmail = setControlledEmail || setInternalEmail;
   const password = controlledPassword !== undefined ? controlledPassword : internalPassword;
   const setPassword = setControlledPassword || setInternalPassword;
+  const rememberMe = controlledRememberMe !== undefined ? controlledRememberMe : internalRememberMe;
+  const setRememberMe = setControlledRememberMe || setInternalRememberMe;
 
   // 3D card tilt effect
   const mouseX = useMotionValue(0);
@@ -225,7 +231,7 @@ export function SignInCard({
                     <input
                       type="email"
                       required
-                      placeholder="you@college.edu"
+                      placeholder="name@gmail.com or campus email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       onFocus={() => setFocusedInput('email')}

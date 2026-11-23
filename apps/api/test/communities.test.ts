@@ -116,8 +116,8 @@ describe('VYNK Real Communities & Campus Collaboration Service', () => {
     expect(searchResult.items.every((c: any) => c.category === uniqueCategory)).toBe(true);
     // Verify member count descending order
     if (searchResult.items.length >= 2) {
-      const count1 = searchResult.items[0]._count?.members || searchResult.items[0].members?.length || 0;
-      const count2 = searchResult.items[1]._count?.members || searchResult.items[1].members?.length || 0;
+      const count1 = (searchResult.items[0] as any)._count?.members || (searchResult.items[0] as any).members?.length || 0;
+      const count2 = (searchResult.items[1] as any)._count?.members || (searchResult.items[1] as any).members?.length || 0;
       expect(count1).toBeGreaterThanOrEqual(count2);
     }
   });
@@ -128,6 +128,7 @@ describe('VYNK Real Communities & Campus Collaboration Service', () => {
       await communityService.create(rateLimitedUserId, {
         name: `Rate Limit Guild ${i}_${Date.now()}`,
         description: 'Testing the 3-communities per 24 hour limit.',
+        category: 'TECHNOLOGY',
         enforceRateLimit: true,
       });
     }
@@ -136,6 +137,7 @@ describe('VYNK Real Communities & Campus Collaboration Service', () => {
       communityService.create(rateLimitedUserId, {
         name: `Rate Limit Guild Overflow ${Date.now()}`,
         description: 'Testing the 3-communities per 24 hour limit.',
+        category: 'TECHNOLOGY',
         enforceRateLimit: true,
       })
     ).rejects.toThrow('Daily limit reached: You can create a maximum of 3 communities per 24 hours.');

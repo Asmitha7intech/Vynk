@@ -18,6 +18,7 @@ export function AuthPage() {
   const [department, setDepartment] = useState('Computer Science');
   const [graduationYear, setGraduationYear] = useState('2026');
   const [dob, setDob] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -36,10 +37,14 @@ export function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Redirect destination after login
+  // Redirect destination after login (prevent auth redirect loops)
   const from = useMemo(() => {
     const params = new URLSearchParams(location.search);
-    return params.get('from') || '/';
+    const target = params.get('from');
+    if (!target || target === '/auth' || target === '/login' || target.startsWith('/auth?') || target.startsWith('/login?')) {
+      return '/';
+    }
+    return target;
   }, [location.search]);
 
   // Password Strength Computation (min 10 chars)
@@ -316,6 +321,8 @@ export function AuthPage() {
         setEmail={setEmail}
         password={password}
         setPassword={setPassword}
+        rememberMe={rememberMe}
+        setRememberMe={setRememberMe}
         isLoading={isLoading}
         errorMessage={errorMessage}
         extraFields={extraRegistrationFields}

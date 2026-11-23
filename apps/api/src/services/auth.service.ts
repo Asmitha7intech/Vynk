@@ -41,7 +41,6 @@ export const authService = {
         department: input.department?.trim() || 'Computer Science',
         graduationYear: input.graduationYear,
         role: (input.role as any) || 'STUDENT',
-        isActive: true,
         xp: 50, // Profile creation bonus
         level: 1,
         reputationScore: 100,
@@ -79,7 +78,7 @@ export const authService = {
       throw new Error('Invalid email or password.');
     }
 
-    if (user.isActive === false) {
+    if ((user as any).isActive === false) {
       throw new Error('Your account is inactive or suspended. Please contact campus support.');
     }
 

@@ -70,23 +70,15 @@ export const mailProvider: IMailProvider =
 
 export const mailService = {
   /**
-   * Validates whether an email belongs to an allowed academic or institutional domain.
+   * Validates whether an email belongs to an allowed academic or personal domain.
+   * VYNK supports students with any valid email provider (Gmail, Outlook, Yahoo, iCloud, or campus domains).
    */
   isAllowedCollegeEmail: (email: string): boolean => {
     if (!email || !email.includes('@')) return false;
-    const domain = email.toLowerCase().split('@')[1];
-
-    const configured = process.env.ALLOWED_COLLEGE_DOMAINS
-      ? process.env.ALLOWED_COLLEGE_DOMAINS.split(',').map((d) => d.trim().toLowerCase())
-      : ['citchennai.net', 'mit.edu', 'stanford.edu', 'berkeley.edu', 'cmu.edu', 'cit.edu.in', 'cit.in', 'gmail.com'];
-
-    // Allow explicitly configured domains, or any standard academic domains (.edu, .edu.in, .ac.in)
-    return (
-      configured.includes(domain) ||
-      domain.endsWith('.edu') ||
-      domain.endsWith('.edu.in') ||
-      domain.endsWith('.ac.in')
-    );
+    const parts = email.split('@');
+    if (parts.length !== 2) return false;
+    const domain = parts[1].trim().toLowerCase();
+    return domain.length > 0 && domain.includes('.');
   },
 
   /**

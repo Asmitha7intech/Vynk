@@ -45,8 +45,17 @@ export const useAuthStore = create<AuthState>()(
             localStorage.removeItem('vynk_access_token');
             localStorage.removeItem('vynk_refresh_token');
             disconnectSocket();
+            set({ user: null, token: null, refreshToken: null, isAuthenticated: false, isInitializing: false });
+          } else {
+            // Keep persisted user session active if available during temporary offline / network errors
+            const existingUser = get().user;
+            set({
+              user: existingUser,
+              token: existingUser ? token : null,
+              isAuthenticated: !!existingUser,
+              isInitializing: false,
+            });
           }
-          set({ user: null, token: null, refreshToken: null, isAuthenticated: false, isInitializing: false });
         }
       },
       login: (user, token, refreshToken) => {

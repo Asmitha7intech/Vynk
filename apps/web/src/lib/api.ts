@@ -42,6 +42,7 @@ async function refreshAccessToken(): Promise<string | null> {
     try {
       const res = await fetch(API_BASE + '/auth/refresh', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
       });
@@ -87,6 +88,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}, isRetry =
   try {
     res = await fetch(API_BASE + endpoint, {
       ...options,
+      credentials: 'include',
       headers,
     });
   } catch (networkErr: any) {
@@ -160,7 +162,19 @@ async function request<T>(endpoint: string, options: RequestInit = {}, isRetry =
     return {} as T;
   }
 
-  return json.data !== undefined ? json.data : json;
+  if (json.data !== undefined) {
+    if (typeof json.data === 'object' && json.data !== null && !Array.isArray(json.data)) {
+      return {
+        success: json.success ?? true,
+        ...(json.message !== undefined ? { message: json.message } : {}),
+        data: json.data,
+        ...json.data,
+      } as T;
+    }
+    return json.data as T;
+  }
+
+  return json as T;
 }
 
 export const api = {
